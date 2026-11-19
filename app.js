@@ -7,7 +7,8 @@ const STORAGE_KEY_GIUSTIFICATIVI = 'orario_flex_giustificativi';
 
 let timbrature = [];
 let giustificativi = [];
-let currentDate = new Date(2026, 2, 2); // Default sul primo giorno storico (2 marzo 2026) o oggi se oltre
+// All'avvio si posiziona sempre sulla giornata di oggi
+let currentDate = new Date();
 
 // Inizializzazione dati
 function initStorage() {
@@ -53,7 +54,6 @@ function formatExcelDate(str) {
     'settembre': '09', 'ottobre': '10', 'novembre': '11', 'dicembre': '12'
   };
   const parts = str.toLowerCase().split(' ');
-  // Formato: [giorno_settimana, giorno, mese, anno]
   if (parts.length >= 4) {
     const day = parts[1].padStart(2, '0');
     const month = mesi[parts[2]] || '01';
@@ -110,29 +110,77 @@ function aggiornaSchermataOggi() {
     alertContainer.appendChild(box);
   }
 
-  // Timeline passaggi
+  // Render timeline con pulsanti di cancellazione
+  renderTimeline(timbGiorno, giustGiorno);
+}
+
+function renderTimeline(timbGiorno, giustGiorno) {
   const tl = document.getElementById('timelineList');
   tl.innerHTML = '';
+
   if (timbGiorno.length === 0 && giustGiorno.length === 0) {
     tl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem;">Nessuna timbratura o permesso registrato</div>';
-  } else {
-    timbGiorno.forEach(t => {
-      const item = document.createElement('div');
-      item.className = 'timeline-item';
-      item.innerHTML = `<span>🕒 Timbratura <strong>${t.tipo}</strong></span><span>${t.ora}</span>`;
-      tl.appendChild(item);
-    });
-    giustGiorno.forEach(g => {
-      const item = document.createElement('div');
-      item.className = 'timeline-item';
-      item.innerHTML = `<span>📋 Giustificativo <strong>${g.tipo}</strong></span><span>${g.durata || (g.oraInizio + '-' + g.oraFine)}</span>`;
-      tl.appendChild(item);
-    });
+    return;
+  }
+
+  timbGiorno.forEach((t) => {
+    const globalIdx = timbrature.indexOf(t);
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+    item.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button onclick="eliminaTimbratura(${globalIdx})" style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: var(--danger); font-size: 0.75rem; border-radius: 4px; padding: 2px 6px; cursor: pointer;" title="Elimina passaggio">🗑️ Elimina</button>
+        <span>🕒 Timbratura <strong>${t.tipo}</strong></span>
+      </div>
+      <span style="font-weight: 600;">${t.ora}</span>
+    `;
+    tl.appendChild(item);
+  });
+
+  giustGiorno.forEach((g) => {
+    const globalIdx = giustificativi.indexOf(g);
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+    item.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button onclick="eliminaGiustificativo(${globalIdx})" style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: var(--danger); font-size: 0.75rem; border-radius: 4px; padding: 2px 6px; cursor: pointer;" title="Elimina giustificativo">🗑️ Elimina</button>
+        <span>📋 Giustificativo <strong>${g.tipo}</strong></span>
+      </div>
+      <span style="font-weight: 600;">${g.durata || (g.oraInizio + '-' + g.oraFine)}</span>
+    `;
+    tl.appendChild(item);
+  });
+}
+
+function eliminaTimbratura(index) {
+  if (index >= 0 && index < timbrature.length) {
+    const rimosso = timbrature[index];
+    if (confirm(`Vuoi davvero eliminare la timbratura ${rimosso.tipo} delle ore ${rimosso.ora}?`)) {
+      timbrature.splice(index, 1);
+      salvaDati();
+      aggiornaSchermataOggi();
+    }
+  }
+}
+
+function eliminaGiustificativo(index) {
+  if (index >= 0 && index < giustificativi.length) {
+    const rimosso = giustificativi[index];
+    if (confirm(`Vuoi davvero eliminare il giustificativo ${rimosso.tipo}?`)) {
+      giustificativi.splice(index, 1);
+      salvaDati();
+      aggiornaSchermataOggi();
+    }
   }
 }
 
 function cambiaGiorno(delta) {
   currentDate.setDate(currentDate.getDate() + delta);
+  aggiornaSchermataOggi();
+}
+
+function vaiAOggi() {
+  currentDate = new Date();
   aggiornaSchermataOggi();
 }
 

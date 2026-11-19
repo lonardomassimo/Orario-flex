@@ -26,7 +26,7 @@
     
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     h1 { font-size: 1.4rem; color: var(--text); font-weight: 700; }
-    .badge { background: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+    .badge { background: var(--primary); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; border: none; cursor: pointer; }
 
     .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; background: var(--card-bg); padding: 4px; border-radius: 10px; border: 1px solid var(--card-border); }
     .nav-btn { flex: 1; padding: 8px; background: none; border: none; color: var(--text-muted); font-weight: 600; cursor: pointer; border-radius: 6px; transition: 0.2s; }
@@ -56,12 +56,13 @@
     .alert-item { margin-top: 4px; }
 
     .timeline { margin-top: 10px; }
-    .timeline-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.9rem; }
+    .timeline-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.9rem; }
     .timeline-item:last-child { border: none; }
 
-    .date-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .date-nav button { background: var(--card-bg); border: 1px solid var(--card-border); color: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; }
-    .date-nav-title { font-size: 1rem; font-weight: 600; }
+    .date-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 6px; }
+    .date-nav button { background: var(--card-bg); border: 1px solid var(--card-border); color: #fff; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+    .date-nav-title { font-size: 0.95rem; font-weight: 600; text-align: center; flex: 1; }
+    .btn-today { background: rgba(37, 99, 235, 0.2) !important; border-color: var(--primary) !important; color: var(--accent) !important; font-weight: bold; }
 
     /* Modal */
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 16px; }
@@ -96,6 +97,7 @@
   <div id="tab-oggi">
     <div class="date-nav">
       <button onclick="cambiaGiorno(-1)">◀ Ieri</button>
+      <button class="btn-today" onclick="vaiAOggi()">📅 Oggi</button>
       <div class="date-nav-title" id="currentDateLabel">Oggi</div>
       <button onclick="cambiaGiorno(1)">Domani ▶</button>
     </div>
@@ -132,7 +134,7 @@
     </div>
 
     <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-      <button class="btn btn-warning" style="flex: 1;" onclick="apriDialogGiustificativo()">➕ Aggiungi Permesso/Visita</button>
+      <button class="btn btn-warning" style="flex: 1;" onclick="apriDialogGiustificativo()">➕ Permesso / Visita</button>
       <button class="btn btn-secondary" style="flex: 1;" onclick="apriDialogTimbraturaManuale()">🕒 Aggiungi Orario</button>
     </div>
 
@@ -268,7 +270,7 @@
     <div class="modal-content">
       <h3 style="margin-bottom: 8px;">Backup e Sincronizzazione</h3>
       <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
-        I tuoi dati sono conservati nella memoria del browser. Puoi scaricare un backup o caricare i dati per passare facilmente tra PC e telefono.
+        I tuoi dati sono conservati nella memoria del browser. Puoi scaricare un backup o caricarlo per trasferire i dati tra PC e telefono.
       </p>
 
       <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="esportaDati()">📥 Scarica File Backup (JSON)</button>
