@@ -38,11 +38,23 @@
     .hero-time { font-size: 3rem; font-weight: 800; color: #fff; line-height: 1; margin: 8px 0; }
     .hero-sub { font-size: 0.85rem; color: var(--text-muted); }
 
+    /* Nuova Card Info Pausa e Previsione Straordinario */
+    .info-card { background: #1e293b; border-left: 4px solid var(--accent); padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; }
+    .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .info-row:last-child { margin-bottom: 0; }
+
     .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-    .stat-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; text-align: center; }
+    .stat-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; text-align: center; position: relative; }
     .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
     .stat-val { font-size: 1.1rem; font-weight: bold; }
     .stat-highlight { color: var(--accent); }
+    .live-pulse { display: inline-block; width: 8px; height: 8px; background-color: var(--success); border-radius: 50%; margin-left: 4px; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
 
     .actions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
     .btn { padding: 12px; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -82,7 +94,7 @@
   <header>
     <div>
       <h1>⏱️ Orario Flex</h1>
-      <p style="font-size: 0.75rem; color: var(--text-muted)">Nessun foglio Excel. Dati sempre tuoi.</p>
+      <p style="font-size: 0.75rem; color: var(--text-muted)">Monitoraggio Real-Time e Previsione Uscita</p>
     </div>
     <button class="badge" id="btnSync">💾 Backup / Sincro</button>
   </header>
@@ -102,15 +114,33 @@
       <button onclick="cambiaGiorno(1)">Domani ▶</button>
     </div>
 
+    <!-- Hero Card Uscita Minima -->
     <div class="card hero-card">
       <div class="hero-title">Uscita Minima Teorica</div>
       <div class="hero-time" id="heroUscita">--:--</div>
       <div class="hero-sub" id="heroSub">In attesa di timbratura d'entrata</div>
     </div>
 
+    <!-- Nuova Card Calcolo Pausa Massima & Straordinario Previsto -->
+    <div class="info-card" id="cardPausaPrevisione" style="display: none;">
+      <div class="info-row">
+        <span>☕ Pausa massima per uscire alle 17:15:</span>
+        <strong id="valPausaMassima" style="color: var(--accent);">--</strong>
+      </div>
+      <div class="info-row" id="rowAnticipoPaletto" style="display: none;">
+        <span>⏳ Maturazione straordinario (paletto 17:15):</span>
+        <strong id="valAnticipoPaletto" style="color: var(--warning);">--</strong>
+      </div>
+      <div class="info-row" id="rowUscitaStraord30">
+        <span>⭐ Uscita per straordinario minimo (30m):</span>
+        <strong id="valUscitaStraord30" style="color: var(--success);">--</strong>
+      </div>
+    </div>
+
+    <!-- Statistiche del giorno (con badge LIVE) -->
     <div class="stats-row">
       <div class="stat-box">
-        <div class="stat-label">Ore Svolte</div>
+        <div class="stat-label">Ore Svolte <span id="pulseOre" class="live-pulse" style="display: none;"></span></div>
         <div class="stat-val" id="statOreSvolte">0h 00m</div>
       </div>
       <div class="stat-box">
@@ -118,7 +148,7 @@
         <div class="stat-val" id="statPausa">0 min</div>
       </div>
       <div class="stat-box">
-        <div class="stat-label">Straordinario</div>
+        <div class="stat-label">Straordinario <span id="pulseStraord" class="live-pulse" style="display: none;"></span></div>
         <div class="stat-val stat-highlight" id="statStraord">0 min</div>
       </div>
     </div>

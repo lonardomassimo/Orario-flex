@@ -36,9 +36,8 @@ function formatMinutesToHoursMins(min) {
   return `${h}h ${m.toString().padStart(2, '0')}m`;
 }
 
-// Calcolo deterministico della singola giornata
-function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno) {
-  // dataStr = YYYY-MM-DD
+// Calcolo deterministico della singola giornata con supporto live time
+function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMinutes = null) {
   const dateObj = new Date(dataStr + 'T12:00:00');
   const dayOfWeek = dateObj.getDay(); // 0=Dom, 1=Lun, ..., 5=Ven, 6=Sab
   const isVenerdi = (dayOfWeek === 5);
@@ -95,7 +94,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno) {
     }
   }
 
-  // 4. Pausa Effettiva
+  // 4. Pausa Effettiva / In corso
   const hasStraordPausa = giustificativiGiorno.some(g => g.tipo === 'STRAORDINARIO PAUSA');
   const hasPausaNonTimbrata = giustificativiGiorno.some(g => g.tipo === 'PAUSA NON TIMBRATA');
 
@@ -108,7 +107,12 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno) {
     if (inizioPausaMin !== null && finePausaNormMin !== null) {
       const durataTimbrata = Math.max(0, finePausaNormMin - inizioPausaMin);
       pausaEffettivaMin = Math.max(PARAMETRI.pausaMinimaMinuti, durataTimbrata);
+    } else if (inizioPausaMin !== null && finePausaNormMin === null) {
+      // Pausa attualmente in corso
+      const tempoInPausa = (nowMinutes !== null) ? Math.max(0, nowMinutes - inizioPausaMin) : PARAMETRI.pausaMinimaMinuti;
+      pausaEffettivaMin = Math.max(PARAMETRI.pausaMinimaMinuti, tempoInPausa);
     } else {
+      // Nessuna timbratura di pausa
       if (hasStraordPausa) {
         pausaEffettivaMin = 0;
         pausaConvertitaStraordMin = PARAMETRI.pausaMinimaMinuti;
@@ -118,7 +122,9 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno) {
         attenzioni.push('Pausa non timbrata registrata a permesso');
       } else {
         pausaEffettivaMin = PARAMETRI.pausaMinimaMinuti;
-        attenzioni.push('Pausa non timbrata: dedotti 30 min d’ufficio');
+        if (ultimaUscitaMin !== null) {
+          attenzioni.push('Pausa non timbrata: dedotti 30 min d’ufficio');
+        }
       }
     }
   }
@@ -139,31 +145,70 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno) {
     }
   });
 
-  // 6. Uscita Teorica Minima
+  // 6. Uscita Teorica Minima & Calcolo Pausa Massima per uscire all'orario minimo
   let uscitaTeoricaMin = null;
+  let pausaMassimaPerUscitaMinima = null;
+  let anticipoRispettoPalettoMin = 0;
+  let uscitaMinimoStraordinario30Min = null;
+
   if (entrataNormMin !== null) {
     const baseCalcolo = Math.min(9 * 60, entrataNormMin);
-    const minutiNecessari = baseCalcolo + Math.max(0, oreDovute - oreGiustificateMin) + pausaEffettivaMin;
+    const oreLavoroNecessarie = Math.max(0, oreDovute - oreGiustificateMin);
 
     if (isVenerdi) {
-      uscitaTeoricaMin = entrataNormMin + Math.max(0, oreDovute - oreGiustificateMin);
+      uscitaTeoricaMin = entrataNormMin + oreLavoroNecessarie;
     } else {
-      uscitaTeoricaMin = Math.max(PARAMETRI.uscitaMinimaLunGio, minutiNecessari);
+      // 17:15 = 1035 min
+      // Lavoro + Pausa minima da fare:
+      const orarioConPausaMinima = baseCalcolo + oreLavoroNecessarie + PARAMETRI.pausaMinimaMinuti;
+      
+      // La pausa massima per poter uscire alle 17:15 (o con pausa minima se si esce dopo):
+      // 17:15 - (baseCalcolo + oreLavoroNecessarie)
+      const pausaPossibileGrezza = PARAMETRI.uscitaMinimaLunGio - (baseCalcolo + oreLavoroNecessarie);
+      pausaMassimaPerUscitaMinima = Math.max(PARAMETRI.pausaMinimaMinuti, pausaPossibileGrezza);
+
+      // Orario di completamento 8 ore con la pausa effettiva attuale:
+      const orarioCompletamento8h = baseCalcolo + oreLavoroNecessarie + pausaEffettivaMin;
+      
+      // L'uscita non può MAI essere prima delle 17:15
+      uscitaTeoricaMin = Math.max(PARAMETRI.uscitaMinimaLunGio, orarioCompletamento8h);
+
+      // Se orarioCompletamento8h < 17:15, non posso uscire prima delle 17:15!
+      if (orarioCompletamento8h < PARAMETRI.uscitaMinimaLunGio) {
+        anticipoRispettoPalettoMin = PARAMETRI.uscitaMinimaLunGio - orarioCompletamento8h;
+      }
+
+      // Ora per fare 30 min di straordinario:
+      // Lo straordinario scatta a +30 min dal completamento dell'orario
+      uscitaMinimoStraordinario30Min = orarioCompletamento8h + 30;
+      // E comunque non prima delle 17:15
+      if (uscitaMinimoStraordinario30Min < PARAMETRI.uscitaMinimaLunGio) {
+        uscitaMinimoStraordinario30Min = PARAMETRI.uscitaMinimaLunGio;
+      }
     }
   }
 
-  // 7. Ore Lavorate Effettive
+  // 7. Ore Lavorate Effettive (LIVE o CONGELATE alla timbratura Uscita)
   let oreLavorateMin = 0;
-  if (entrataNormMin !== null && ultimaUscitaMin !== null) {
-    const lordo = Math.max(0, ultimaUscitaMin - entrataNormMin);
+  let isLive = false;
+
+  const fineConteggioMin = ultimaUscitaMin !== null 
+    ? ultimaUscitaMin 
+    : (nowMinutes !== null ? nowMinutes : null);
+
+  if (entrataNormMin !== null && fineConteggioMin !== null) {
+    if (ultimaUscitaMin === null) {
+      isLive = true; // Conteggio in tempo reale
+    }
+    const lordo = Math.max(0, fineConteggioMin - entrataNormMin);
     oreLavorateMin = Math.max(0, lordo - pausaEffettivaMin);
-  } else if (entrataNormMin !== null && ultimaUscitaMin === null) {
+  } else if (entrataNormMin !== null && ultimaUscitaMin === null && nowMinutes === null) {
     attenzioni.push('Uscita mancante');
   }
 
   const oreTotaliSvolteMin = oreLavorateMin + oreGiustificateMin;
 
-  // 8. Straordinario
+  // 8. Straordinario LIVE o CONGELATO
   const ritardoTotaleMin = ritardoIngressoMin + ritardoPausaMin;
   const eccedenzaGrezzaMin = Math.max(0, oreTotaliSvolteMin - oreDovute) + pausaConvertitaStraordMin;
   const eccedenzaNettaMin = Math.max(0, eccedenzaGrezzaMin - ritardoTotaleMin);
@@ -177,7 +222,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno) {
     if (eccedenzaGrezzaMin >= ritardoTotaleMin) {
       attenzioni.push(`Ritardo compensato (${ritardoTotaleMin} min)`);
     } else {
-      attenzioni.push(`Ritardo non compensato interamente (${ritardoTotaleMin - eccedenzaGrezzaMin} min scoperti)`);
+      attenzioni.push(`Ritardo non compensato (${ritardoTotaleMin - eccedenzaGrezzaMin} min scoperti)`);
     }
   }
 
@@ -194,6 +239,9 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno) {
     oreDovute,
     entrataNorm: formatMinutesToTime(entrataNormMin),
     uscitaTeorica: formatMinutesToTime(uscitaTeoricaMin),
+    pausaMassimaPerUscitaMinima: formatMinutesToTime(pausaMassimaPerUscitaMinima),
+    anticipoRispettoPalettoMin,
+    uscitaMinimoStraordinario30Min: formatMinutesToTime(uscitaMinimoStraordinario30Min),
     inizioPausa: formatMinutesToTime(inizioPausaMin),
     finePausa: formatMinutesToTime(finePausaNormMin),
     ultimaUscita: formatMinutesToTime(ultimaUscitaMin),
@@ -203,6 +251,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno) {
     oreTotaliSvolteMin,
     straordinarioNettoMin,
     ticket,
+    isLive,
     attenzioni
   };
 }

@@ -7,8 +7,8 @@ const STORAGE_KEY_GIUSTIFICATIVI = 'orario_flex_giustificativi';
 
 let timbrature = [];
 let giustificativi = [];
-// All'avvio si posiziona sempre sulla giornata di oggi
-let currentDate = new Date();
+let currentDate = new Date(); // Sempre oggi all'avvio
+let timerInterval = null;
 
 // Inizializzazione dati
 function initStorage() {
@@ -44,7 +44,6 @@ function initStorage() {
   }
 }
 
-// Converte "lunedì 2 marzo 2026" in "2026-03-02"
 function formatExcelDate(str) {
   if (!str) return '';
   if (str.includes('-')) return str;
@@ -88,18 +87,54 @@ function aggiornaSchermataOggi() {
   const timbGiorno = timbrature.filter(t => t.data === isoStr);
   const giustGiorno = giustificativi.filter(g => g.data === isoStr);
 
-  const calcolo = calcolaGiornata(isoStr, timbGiorno, giustGiorno);
+  // Verifichiamo se stiamo visualizzando la giornata di oggi
+  const isToday = (isoStr === formatDateISO(new Date()));
+  const now = new Date();
+  const nowMinutes = isToday ? (now.getHours() * 60 + now.getMinutes()) : null;
 
+  const calcolo = calcolaGiornata(isoStr, timbGiorno, giustGiorno, nowMinutes);
+
+  // 1. Hero Card: Uscita Minima
   document.getElementById('heroUscita').textContent = calcolo.uscitaTeorica;
   document.getElementById('heroSub').textContent = (calcolo.entrataNorm !== '--:--')
     ? `Entrata normalizzata: ${calcolo.entrataNorm}`
     : `In attesa di timbratura d'entrata`;
 
+  // 2. Nuova Card: Pausa Massima & Previsione Straordinario
+  const cardPausa = document.getElementById('cardPausaPrevisione');
+  if (calcolo.entrataNorm !== '--:--') {
+    cardPausa.style.display = 'block';
+    document.getElementById('valPausaMassima').textContent = calcolo.pausaMassimaPerUscitaMinima;
+
+    const rowAnticipo = document.getElementById('rowAnticipoPaletto');
+    if (calcolo.anticipoRispettoPalettoMin > 0) {
+      rowAnticipo.style.display = 'flex';
+      document.getElementById('valAnticipoPaletto').textContent = `Completate 8h prima delle 17:15. Maturano ${calcolo.anticipoRispettoPalettoMin} min straordinario alle 17:15`;
+    } else {
+      rowAnticipo.style.display = 'none';
+    }
+
+    document.getElementById('valUscitaStraord30').textContent = calcolo.uscitaMinimoStraordinario30Min;
+  } else {
+    cardPausa.style.display = 'none';
+  }
+
+  // 3. Statistiche con indicatore Live
   document.getElementById('statOreSvolte').textContent = formatMinutesToHoursMins(calcolo.oreTotaliSvolteMin);
   document.getElementById('statPausa').textContent = `${calcolo.pausaEffettivaMin} min`;
   document.getElementById('statStraord').textContent = `${calcolo.straordinarioNettoMin} min`;
 
-  // Avvisi
+  const pulseOre = document.getElementById('pulseOre');
+  const pulseStraord = document.getElementById('pulseStraord');
+  if (calcolo.isLive) {
+    pulseOre.style.display = 'inline-block';
+    pulseStraord.style.display = 'inline-block';
+  } else {
+    pulseOre.style.display = 'none';
+    pulseStraord.style.display = 'none';
+  }
+
+  // 4. Avvisi
   const alertContainer = document.getElementById('alertContainer');
   alertContainer.innerHTML = '';
   if (calcolo.attenzioni && calcolo.attenzioni.length > 0) {
@@ -110,7 +145,7 @@ function aggiornaSchermataOggi() {
     alertContainer.appendChild(box);
   }
 
-  // Render timeline con pulsanti di cancellazione
+  // 5. Timeline con pulsanti Elimina
   renderTimeline(timbGiorno, giustGiorno);
 }
 
@@ -287,7 +322,7 @@ function caricaStorico() {
   dateUniche.forEach(dataStr => {
     const tGiorno = timbrature.filter(t => t.data === dataStr);
     const gGiorno = giustificativi.filter(g => g.data === dataStr);
-    const res = calcolaGiornata(dataStr, tGiorno, gGiorno);
+    const res = calcolaGiornata(dataStr, tGiorno, gGiorno, null);
 
     const card = document.createElement('div');
     card.style.cssText = 'padding: 10px 0; border-bottom: 1px solid var(--card-border); display: flex; justify-content: space-between; align-items: center; cursor: pointer;';
@@ -367,4 +402,13 @@ if ('serviceWorker' in navigator) {
 window.onload = () => {
   initStorage();
   aggiornaSchermataOggi();
+
+  // Aggiornamento live ogni 30 secondi
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    // Aggiorna solo se siamo sulla schermata del giorno
+    if (document.getElementById('tab-oggi').style.display !== 'none') {
+      aggiornaSchermataOggi();
+    }
+  }, 30000);
 };
