@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orario Flex</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    h1 { font-size: 1.4rem; color: var(--text); font-weight: 700; }
+    .badge { background: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; background: var(--card-bg); padding: 4px; border-radius: 10px; border: 1px solid var(--card-border); }
+    .nav-btn { flex: 1; padding: 8px; background: none; border: none; color: var(--text-muted); font-weight: 600; cursor: pointer; border-radius: 6px; transition: 0.2s; }
+    .nav-btn.active { background: var(--primary); color: #fff; }
+
+    .card { background: var(--card-bg); border-radius: 14px; padding: 18px; margin-bottom: 16px; border: 1px solid var(--card-border); }
+    .hero-card { text-align: center; background: linear-gradient(145deg, #1e293b, #172554); border-color: #1e40af; }
+    .hero-title { font-size: 0.8rem; color: var(--accent); letter-spacing: 1px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; }
+    .hero-time { font-size: 3rem; font-weight: 800; color: #fff; line-height: 1; margin: 8px 0; }
+    .hero-sub { font-size: 0.85rem; color: var(--text-muted); }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; text-align: center; }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+    .stat-val { font-size: 1.1rem; font-weight: bold; }
+    .stat-highlight { color: var(--accent); }
+
+    .actions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+    .btn { padding: 12px; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-secondary { background: #334155; color: #fff; }
+    .btn-warning { background: var(--warning); color: #000; }
+    .btn-danger { background: var(--danger); color: #fff; }
+
+    .alert-box { background: rgba(245, 158, 11, 0.15); border-left: 4px solid var(--warning); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; }
+    .alert-item { margin-top: 4px; }
+
+    .timeline { margin-top: 10px; }
+    .timeline-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.9rem; }
+    .timeline-item:last-child { border: none; }
+
+    .date-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .date-nav button { background: var(--card-bg); border: 1px solid var(--card-border); color: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; }
+    .date-nav-title { font-size: 1rem; font-weight: 600; }
+
+    /* Modal */
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 16px; }
+    .modal.active { display: flex; }
+    .modal-content { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 20px; width: 100%; max-width: 450px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--card-border); background: #0f172a; color: #fff; font-size: 0.95rem; }
+
+    /* Progress */
+    .progress-bar-bg { background: #334155; border-radius: 6px; height: 8px; overflow: hidden; margin: 8px 0; }
+    .progress-bar-fill { background: var(--primary); height: 100%; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>⏱️ Orario Flex</h1>
+      <p style="font-size: 0.75rem; color: var(--text-muted)">Nessun foglio Excel. Dati sempre tuoi.</p>
+    </div>
+    <button class="badge" id="btnSync">💾 Backup / Sincro</button>
+  </header>
+
+  <nav class="nav-tabs">
+    <button class="nav-btn active" onclick="switchTab('tab-oggi')">Oggi</button>
+    <button class="nav-btn" onclick="switchTab('tab-storico')">Storico Giorni</button>
+    <button class="nav-btn" onclick="switchTab('tab-riepilogo')">Riepilogo & Saldi</button>
+  </nav>
+
+  <!-- TAB OGGI -->
+  <div id="tab-oggi">
+    <div class="date-nav">
+      <button onclick="cambiaGiorno(-1)">◀ Ieri</button>
+      <div class="date-nav-title" id="currentDateLabel">Oggi</div>
+      <button onclick="cambiaGiorno(1)">Domani ▶</button>
+    </div>
+
+    <div class="card hero-card">
+      <div class="hero-title">Uscita Minima Teorica</div>
+      <div class="hero-time" id="heroUscita">--:--</div>
+      <div class="hero-sub" id="heroSub">In attesa di timbratura d'entrata</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-label">Ore Svolte</div>
+        <div class="stat-val" id="statOreSvolte">0h 00m</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Pausa Pranzo</div>
+        <div class="stat-val" id="statPausa">0 min</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Straordinario</div>
+        <div class="stat-val stat-highlight" id="statStraord">0 min</div>
+      </div>
+    </div>
+
+    <!-- Alert / Avvisi -->
+    <div id="alertContainer"></div>
+
+    <div class="actions-grid">
+      <button class="btn btn-primary" onclick="quickTimbra('E')">🟢 Entrata</button>
+      <button class="btn btn-secondary" onclick="quickTimbra('U PAUSA')">☕ Inizio Pausa</button>
+      <button class="btn btn-secondary" onclick="quickTimbra('E PAUSA')">🥪 Fine Pausa</button>
+      <button class="btn btn-danger" onclick="quickTimbra('U')">🔴 Uscita</button>
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+      <button class="btn btn-warning" style="flex: 1;" onclick="apriDialogGiustificativo()">➕ Aggiungi Permesso/Visita</button>
+      <button class="btn btn-secondary" style="flex: 1;" onclick="apriDialogTimbraturaManuale()">🕒 Aggiungi Orario</button>
+    </div>
+
+    <div class="card">
+      <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 10px;">Passaggi Registrati</div>
+      <div class="timeline" id="timelineList">
+        <div style="color: var(--text-muted); font-size: 0.85rem;">Nessuna timbratura per oggi</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB STORICO -->
+  <div id="tab-storico" style="display: none;">
+    <div class="card">
+      <div style="font-weight: bold; margin-bottom: 12px;">Storico Giornate Lavorative</div>
+      <div id="storicoList">Caricamento...</div>
+    </div>
+  </div>
+
+  <!-- TAB RIEPILOGO -->
+  <div id="tab-riepilogo" style="display: none;">
+    <div class="card">
+      <div style="font-weight: bold; margin-bottom: 12px;">Totali Mese (Marzo 2026)</div>
+      <div class="timeline">
+        <div class="timeline-item"><span>Ore Lavorate Effettive</span><span id="totOreLav">72h 09m</span></div>
+        <div class="timeline-item"><span>Ore Giustificate</span><span id="totOreGiust">3h 15m</span></div>
+        <div class="timeline-item"><strong>Straordinario Totale</strong><strong id="totStraord">1h 15m</strong></div>
+        <div class="timeline-item"><span style="padding-left: 12px;">↳ In Banca Ore</span><span id="totStraordRec">0h 45m</span></div>
+        <div class="timeline-item"><span style="padding-left: 12px;">↳ In Pagamento (+30%)</span><span id="totStraordPag">0h 30m</span></div>
+        <div class="timeline-item"><strong>Ticket Restaurant Maturati</strong><strong id="totTicket" style="color: var(--accent);">9</strong></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight: bold; margin-bottom: 12px;">Saldi Annuali & Residui (2026)</div>
+      
+      <div style="margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+          <span>Banca Ore Straordinari</span>
+          <strong>4h / max 40h</strong>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 10%;"></div></div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">36 ore ancora accantonabili</div>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+          <span>Ferie</span>
+          <strong>165h rimanenti (usate 3h)</strong>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 98%;"></div></div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">Tetto annuo: 168 ore</div>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+          <span>Visite Mediche</span>
+          <strong>28h 45m rimanenti</strong>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 95%;"></div></div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">Usate 1h 15m su 30 ore annue</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL GIUSTIFICATIVO -->
+  <div class="modal" id="modalGiust">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 12px;">Aggiungi Giustificativo</h3>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select id="selTipoGiust" onchange="aggiornaFormGiust()">
+          <option value="VISITA MEDICA">Visita Medica</option>
+          <option value="FERIE">Ferie</option>
+          <option value="EX-FESTIVITÀ">Ex-Festività</option>
+          <option value="ORE RECUPERO">Ore Recupero Straordinari</option>
+          <option value="PAUSA NON TIMBRATA">Pausa Non Timbrata (deduci 30m)</option>
+          <option value="STRAORDINARIO PAUSA">Straordinario Pausa (autorizzato)</option>
+        </select>
+      </div>
+
+      <div id="visitaFields">
+        <div class="form-group" style="display: flex; gap: 8px;">
+          <div style="flex:1;"><label>Dalle (Inizio)</label><input type="time" id="visitaInizio" value="12:00"></div>
+          <div style="flex:1;"><label>Alle (Fine)</label><input type="time" id="visitaFine" value="12:30"></div>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" id="chkTragittoPrima" checked> Tragitto prima (30 min)</label>
+          <label><input type="checkbox" id="chkTragittoDopo" checked> Tragitto dopo (30 min)</label>
+        </div>
+      </div>
+
+      <div id="durataFields" style="display: none;">
+        <div class="form-group">
+          <label>Durata (Ore:Minuti)</label>
+          <input type="text" id="durataManuale" placeholder="es. 1:30 o 3:00">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 16px;">
+        <button class="btn btn-primary" style="flex: 1;" onclick="salvaGiustificativo()">Conferma</button>
+        <button class="btn btn-secondary" style="flex: 1;" onclick="chiudiModal('modalGiust')">Annulla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TIMBRATURA MANUALE -->
+  <div class="modal" id="modalTimb">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 12px;">Aggiungi Timbratura Manuale</h3>
+      <div class="form-group">
+        <label>Tipo Passaggio</label>
+        <select id="selTipoTimb">
+          <option value="E">Entrata (E)</option>
+          <option value="U PAUSA">Uscita Pausa (U PAUSA)</option>
+          <option value="E PAUSA">Rientro Pausa (E PAUSA)</option>
+          <option value="U">Uscita (U)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Orario (hh:mm)</label>
+        <input type="time" id="oraTimbManuale">
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 16px;">
+        <button class="btn btn-primary" style="flex: 1;" onclick="salvaTimbraturaManuale()">Salva</button>
+        <button class="btn btn-secondary" style="flex: 1;" onclick="chiudiModal('modalTimb')">Annulla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BACKUP / SINCRONIZZAZIONE -->
+  <div class="modal" id="modalSync">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 8px;">Backup e Sincronizzazione</h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+        I tuoi dati sono conservati nella memoria del browser. Puoi scaricare un backup o caricare i dati per passare facilmente tra PC e telefono.
+      </p>
+
+      <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="esportaDati()">📥 Scarica File Backup (JSON)</button>
+      
+      <div style="margin: 12px 0; border-top: 1px solid var(--card-border); padding-top: 12px;">
+        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Carica Backup esistente:</label>
+        <input type="file" id="fileImport" accept=".json" style="width: 100%; margin-bottom: 8px;">
+        <button class="btn btn-secondary" style="width: 100%;" onclick="importaDati()">📤 Ripristina Backup</button>
+      </div>
+
+      <button class="btn btn-secondary" style="width: 100%; margin-top: 6px;" onclick="chiudiModal('modalSync')">Chiudi</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="seed.js"></script>
+  <script src="calculator.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
