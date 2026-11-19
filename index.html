@@ -38,10 +38,18 @@
     .hero-time { font-size: 3rem; font-weight: 800; color: #fff; line-height: 1; margin: 8px 0; }
     .hero-sub { font-size: 0.85rem; color: var(--text-muted); }
 
-    /* Nuova Card Info Pausa e Previsione Straordinario */
-    .info-card { background: #1e293b; border-left: 4px solid var(--accent); padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; }
-    .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
-    .info-row:last-child { margin-bottom: 0; }
+    /* Box Scenario Mattina & Monitoraggio Pomeriggio */
+    .smart-card { background: #1e293b; border-radius: 12px; padding: 14px; margin-bottom: 16px; border: 1px solid var(--card-border); }
+    .smart-title { font-size: 0.85rem; font-weight: bold; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .smart-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .smart-row:last-child { border-bottom: none; }
+
+    .target-pills { display: flex; gap: 8px; margin-top: 8px; }
+    .target-pill { flex: 1; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 8px; text-align: center; }
+    .target-label { font-size: 0.7rem; color: var(--text-muted); }
+    .target-val { font-size: 0.95rem; font-weight: bold; color: var(--accent); margin-top: 2px; }
+
+    .live-alert-card { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); border-radius: 10px; padding: 12px; margin-bottom: 16px; }
 
     .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
     .stat-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; text-align: center; position: relative; }
@@ -121,19 +129,48 @@
       <div class="hero-sub" id="heroSub">In attesa di timbratura d'entrata</div>
     </div>
 
-    <!-- Nuova Card Calcolo Pausa Massima & Straordinario Previsto -->
-    <div class="info-card" id="cardPausaPrevisione" style="display: none;">
-      <div class="info-row">
+    <!-- 1. BOX STRATEGIA DEL MATTINO: PAUSA MASSIMA & SCENARI STRAORDINARIO -->
+    <div class="smart-card" id="cardMattina" style="display: none;">
+      <div class="smart-title">🌅 Strategia del Mattino</div>
+      <div class="smart-row">
         <span>☕ Pausa massima per uscire alle 17:15:</span>
         <strong id="valPausaMassima" style="color: var(--accent);">--</strong>
       </div>
-      <div class="info-row" id="rowAnticipoPaletto" style="display: none;">
-        <span>⏳ Maturazione straordinario (paletto 17:15):</span>
+      <div class="smart-row" id="rowAnticipoPaletto" style="display: none;">
+        <span>⏳ Maturazione anticipata (paletto 17:15):</span>
         <strong id="valAnticipoPaletto" style="color: var(--warning);">--</strong>
       </div>
-      <div class="info-row" id="rowUscitaStraord30">
-        <span>⭐ Uscita per straordinario minimo (30m):</span>
-        <strong id="valUscitaStraord30" style="color: var(--success);">--</strong>
+      
+      <div style="margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);">
+        A che ora uscire se decidi di fare straordinario:
+      </div>
+      <div class="target-pills">
+        <div class="target-pill">
+          <div class="target-label">+30m (Minimo)</div>
+          <div class="target-val" id="pillScatto30">--:--</div>
+        </div>
+        <div class="target-pill">
+          <div class="target-label">+45m</div>
+          <div class="target-val" id="pillScatto45">--:--</div>
+        </div>
+        <div class="target-pill">
+          <div class="target-label">+60m (1 ora)</div>
+          <div class="target-val" id="pillScatto60">--:--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. BOX MONITORAGGIO LIVE POMERIGGIO: OLTRE ORARIO & PROSSIMO SCATTO -->
+    <div class="live-alert-card" id="cardPomeriggioLive" style="display: none;">
+      <div style="font-weight: bold; font-size: 0.9rem; color: var(--success); display: flex; justify-content: space-between; align-items: center;">
+        <span>🎯 Monitoraggio Uscita Pomeriggio</span>
+        <span class="live-pulse"></span>
+      </div>
+      <div style="margin-top: 8px; font-size: 0.85rem;">
+        Sei andato oltre l'orario di: <strong id="valOltreOrario" style="color: #fff;">0 min</strong>
+      </div>
+      <div style="margin-top: 4px; font-size: 0.85rem; color: var(--accent);">
+        ⏳ Mancano <strong id="valMinutiProssimoScatto" style="color: #fff;">-- min</strong> per raggiungere <strong id="valNomeProssimoScatto">--</strong> (alle <strong id="valOraProssimoScatto">--:--</strong>)
       </div>
     </div>
 

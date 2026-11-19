@@ -87,7 +87,6 @@ function aggiornaSchermataOggi() {
   const timbGiorno = timbrature.filter(t => t.data === isoStr);
   const giustGiorno = giustificativi.filter(g => g.data === isoStr);
 
-  // Verifichiamo se stiamo visualizzando la giornata di oggi
   const isToday = (isoStr === formatDateISO(new Date()));
   const now = new Date();
   const nowMinutes = isToday ? (now.getHours() * 60 + now.getMinutes()) : null;
@@ -100,10 +99,10 @@ function aggiornaSchermataOggi() {
     ? `Entrata normalizzata: ${calcolo.entrataNorm}`
     : `In attesa di timbratura d'entrata`;
 
-  // 2. Nuova Card: Pausa Massima & Previsione Straordinario
-  const cardPausa = document.getElementById('cardPausaPrevisione');
+  // 2. Box Strategia del Mattino
+  const cardMattina = document.getElementById('cardMattina');
   if (calcolo.entrataNorm !== '--:--') {
-    cardPausa.style.display = 'block';
+    cardMattina.style.display = 'block';
     document.getElementById('valPausaMassima').textContent = calcolo.pausaMassimaPerUscitaMinima;
 
     const rowAnticipo = document.getElementById('rowAnticipoPaletto');
@@ -114,12 +113,28 @@ function aggiornaSchermataOggi() {
       rowAnticipo.style.display = 'none';
     }
 
-    document.getElementById('valUscitaStraord30').textContent = calcolo.uscitaMinimoStraordinario30Min;
+    document.getElementById('pillScatto30').textContent = calcolo.oraScatto30m;
+    document.getElementById('pillScatto45').textContent = calcolo.oraScatto45m;
+    document.getElementById('pillScatto60').textContent = calcolo.oraScatto60m;
   } else {
-    cardPausa.style.display = 'none';
+    cardMattina.style.display = 'none';
   }
 
-  // 3. Statistiche con indicatore Live
+  // 3. Box Monitoraggio Live Pomeriggio (visibile se stiamo lavorando oggi)
+  const cardPomeriggio = document.getElementById('cardPomeriggioLive');
+  if (calcolo.isLive && calcolo.entrataNorm !== '--:--') {
+    cardPomeriggio.style.display = 'block';
+    document.getElementById('valOltreOrario').textContent = `${calcolo.minutiOltreOrario} min`;
+
+    const nomeScatto = calcolo.valoreProssimoScatto > 0 ? `+${calcolo.valoreProssimoScatto} min di straordinario` : 'orario minimo';
+    document.getElementById('valNomeProssimoScatto').textContent = nomeScatto;
+    document.getElementById('valMinutiProssimoScatto').textContent = `${calcolo.minutiAlProssimoScatto} min`;
+    document.getElementById('valOraProssimoScatto').textContent = calcolo.orarioProssimoScatto;
+  } else {
+    cardPomeriggio.style.display = 'none';
+  }
+
+  // 4. Statistiche con indicatore Live
   document.getElementById('statOreSvolte').textContent = formatMinutesToHoursMins(calcolo.oreTotaliSvolteMin);
   document.getElementById('statPausa').textContent = `${calcolo.pausaEffettivaMin} min`;
   document.getElementById('statStraord').textContent = `${calcolo.straordinarioNettoMin} min`;
@@ -134,7 +149,7 @@ function aggiornaSchermataOggi() {
     pulseStraord.style.display = 'none';
   }
 
-  // 4. Avvisi
+  // 5. Avvisi
   const alertContainer = document.getElementById('alertContainer');
   alertContainer.innerHTML = '';
   if (calcolo.attenzioni && calcolo.attenzioni.length > 0) {
@@ -145,7 +160,7 @@ function aggiornaSchermataOggi() {
     alertContainer.appendChild(box);
   }
 
-  // 5. Timeline con pulsanti Elimina
+  // 6. Timeline con pulsanti Elimina
   renderTimeline(timbGiorno, giustGiorno);
 }
 
@@ -406,7 +421,6 @@ window.onload = () => {
   // Aggiornamento live ogni 30 secondi
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
-    // Aggiorna solo se siamo sulla schermata del giorno
     if (document.getElementById('tab-oggi').style.display !== 'none') {
       aggiornaSchermataOggi();
     }

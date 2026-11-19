@@ -1,8 +1,9 @@
-const CACHE_NAME = 'orario-flex-v1';
+const CACHE_NAME = 'orario-flex-v3';
 const ASSETS = [
   './',
   './index.html',
   './app.js',
+  './calculator.js',
   './seed.js',
   './manifest.json',
   './icons/icon-192.png',
