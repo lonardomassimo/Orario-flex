@@ -1,26 +1,17 @@
 {
   "id": "/orario-flex/",
-  "name": "Orario Flex",
-  "short_name": "OrarioFlex",
-  "description": "Gestione e monitoraggio dell'orario flessibile, timbrature e banca ore",
+  "name": "Agesp Flex",
+  "short_name": "Agesp Flex",
+  "description": "Orario flessibile dei dipendenti AGESP SPA: timbrature, giustificativi e straordinari",
   "start_url": "index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0f172a",
-  "theme_color": "#2563eb",
+  "background_color": "#f4f7f7",
+  "theme_color": "#0f5e6b",
   "icons": [
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml"}
   ]
 }
