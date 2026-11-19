@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agesp Flex</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0f5e6b">
+<style>
+:root{--ink:#12303a;--muted:#6b8087;--petrol:#0f5e6b;--petrol-soft:#e4f0f2;--amber:#d98a1f;--amber-soft:#fbf0dc;--bg:#f4f7f7;--card:#fff;--line:#e2e9ea;--danger:#c4432f;--ok:#2f8f6b;--r:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);max-width:560px;margin:0 auto;padding:14px 14px 40px}
+button,input,select{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:10px;padding:4px 2px 14px}
+.brand{flex:1;line-height:1.15}
+.brand b{font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+.brand span{display:block;font-size:.72rem;color:var(--muted)}
+.ghost{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.8rem;color:var(--muted);cursor:pointer}
+nav{display:flex;border-bottom:1px solid var(--line);margin-bottom:14px}
+.nav-btn{flex:1;background:none;border:0;padding:9px 0;font-size:.88rem;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.nav-btn.active{color:var(--petrol);border-color:var(--petrol);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.h{font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:8px}
+.date-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.date-nav .t{flex:1;text-align:center;font-weight:600;font-size:.95rem}
+.date-nav button{background:var(--card);border:1px solid var(--line);border-radius:8px;width:34px;height:34px;cursor:pointer}
+.hero{display:flex;align-items:center;justify-content:space-between;background:var(--petrol);color:#fff;border:0;padding:16px 18px}
+.hero small{display:block;font-size:.78rem;opacity:.75}
+.hero .time{font-size:2.3rem;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.hero .side{text-align:right;font-size:.78rem;opacity:.85;max-width:45%}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:12px}
+.stat{padding:2px 12px;border-left:1px solid var(--line)}
+.stat:first-child{border:0;padding-left:2px}
+.stat small{font-size:.74rem;color:var(--muted);display:block}
+.stat b{font-size:1.05rem;font-weight:650}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;font-size:.88rem;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.pills{display:flex;gap:8px;margin-top:8px}
+.pill{flex:1;background:var(--petrol-soft);border-radius:8px;padding:7px;text-align:center}
+.pill small{display:block;font-size:.7rem;color:var(--muted)}.pill b{font-size:.92rem;color:var(--petrol)}
+.live{background:#e8f5ef;border-color:#bfe3d2;font-size:.86rem}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-left:5px;animation:p 1.6s infinite}
+@keyframes p{50%{opacity:.25}}@media(prefers-reduced-motion:reduce){.dot{animation:none}}
+.alert{background:var(--amber-soft);border-left:3px solid var(--amber);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:.82rem}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:8px 4px;font-size:.84rem;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--card);color:var(--petrol);font-weight:650;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.seg+small{display:block;margin-top:6px;font-size:.75rem;color:var(--muted)}
+.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 4px;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.btn.main{background:var(--petrol);border-color:var(--petrol);color:#fff}
+.btn.wide{flex-direction:row;justify-content:center;gap:6px;flex:1;font-weight:500;color:var(--petrol)}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible,.nav-btn:focus-visible,.seg button:focus-visible{outline:2px solid var(--petrol);outline-offset:2px}
+.tl{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:.86rem;border-bottom:1px solid var(--line)}
+.tl:last-child{border:0}
+.tl .x{background:none;border:0;color:var(--danger);cursor:pointer;font-size:.8rem;margin-right:8px}
+.bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin:5px 0}.bar i{display:block;height:100%;background:var(--petrol)}
+.modal{display:none;position:fixed;inset:0;background:rgba(18,48,58,.45);z-index:9;align-items:center;justify-content:center;padding:16px}
+.modal.active{display:flex}
+.sheet{background:var(--card);border-radius:14px;padding:18px;width:100%;max-width:420px;max-height:90vh;overflow:auto}
+.sheet h3{font-size:1rem;margin-bottom:12px}
+.f{margin-bottom:10px}.f label{display:block;font-size:.76rem;color:var(--muted);margin-bottom:3px}
+.f input[type=text],.f input[type=time],.f select{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.chk{display:flex;gap:6px;align-items:center;font-size:.86rem;margin:4px 0}
+.foot{display:flex;gap:8px;margin-top:14px}.foot .btn{flex:1;flex-direction:row;justify-content:center;padding:10px}
+.empty{color:var(--muted);font-size:.84rem;padding:6px 0}
+</style>
+</head>
+<body>
+<header>
+  <svg width="38" height="38" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0f5e6b"/><circle cx="32" cy="32" r="16" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="76 25" stroke-linecap="round" transform="rotate(-60 32 32)"/><path d="M32 22v10l7 5" fill="none" stroke="#f2b457" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="brand"><b>Agesp Flex</b><span>Orario flessibile · AGESP SPA</span></div>
+  <button class="ghost" id="btnSync">Backup</button>
+</header>
+
+<nav>
+  <button class="nav-btn active" onclick="switchTab('tab-oggi',this)">Oggi</button>
+  <button class="nav-btn" onclick="switchTab('tab-storico',this)">Storico</button>
+  <button class="nav-btn" onclick="switchTab('tab-riepilogo',this)">Riepilogo</button>
+</nav>
+
+<div id="tab-oggi">
+  <div class="date-nav">
+    <button onclick="cambiaGiorno(-1)" aria-label="Giorno precedente">‹</button>
+    <div class="t" id="currentDateLabel"></div>
+    <button onclick="cambiaGiorno(1)" aria-label="Giorno successivo">›</button>
+    <button class="ghost" style="width:auto;padding:0 10px" onclick="vaiAOggi()">Oggi</button>
+  </div>
+
+  <div class="card hero">
+    <div><small>Uscita minima</small><div class="time" id="heroUscita">--:--</div></div>
+    <div class="side" id="heroSub">In attesa dell'entrata</div>
+  </div>
+
+  <div class="stats card">
+    <div class="stat"><small>Ore svolte<span id="pulseOre" class="dot" style="display:none"></span></small><b id="statOreSvolte">0h 00m</b></div>
+    <div class="stat"><small>Pausa</small><b id="statPausa">0 min</b></div>
+    <div class="stat"><small>Straordinario<span id="pulseStraord" class="dot" style="display:none"></span></small><b id="statStraord" style="color:var(--amber)">0 min</b></div>
+  </div>
+
+  <div class="card live" id="cardPomeriggioLive" style="display:none">
+    <div>Oltre l'orario: <b id="valOltreOrario">0 min</b></div>
+    <div style="margin-top:3px">Tra <b id="valMinutiProssimoScatto">--</b> raggiungi <b id="valNomeProssimoScatto">--</b> (ore <b id="valOraProssimoScatto">--:--</b>)</div>
+  </div>
+
+  <div id="alertContainer"></div>
+
+  <div class="card">
+    <div class="h">Destinazione dello straordinario di oggi</div>
+    <div class="seg" id="segDest">
+      <button data-v="BANCA" onclick="setDest('BANCA')">Monte ore</button>
+      <button data-v="PAGAMENTO" onclick="setDest('PAGAMENTO')">Pagamento</button>
+    </div>
+    <small id="destNote"></small>
+  </div>
+
+  <div class="actions">
+    <button class="btn main" onclick="quickTimbra('E')">Entrata</button>
+    <button class="btn" onclick="quickTimbra('U PAUSA')">Inizio pausa</button>
+    <button class="btn" onclick="quickTimbra('E PAUSA')">Fine pausa</button>
+    <button class="btn" onclick="quickTimbra('U')">Uscita</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="btn wide" onclick="apriDialogGiustificativo()">+ Giustificativo</button>
+    <button class="btn wide" onclick="apriDialogTimbraturaManuale()">+ Timbratura manuale</button>
+  </div>
+
+  <div class="card" id="cardMattina" style="display:none">
+    <div class="h">Pianificazione</div>
+    <div class="row"><span>Pausa massima per uscire alle 17:15</span><b id="valPausaMassima" style="color:var(--petrol)">--</b></div>
+    <div class="row" id="rowAnticipoPaletto" style="display:none"><span>Paletto 17:15</span><b id="valAnticipoPaletto" style="color:var(--amber)">--</b></div>
+    <div class="h" style="margin-top:10px">Se fai straordinario, esci alle</div>
+    <div class="pills">
+      <div class="pill"><small>+30 min</small><b id="pillScatto30">--</b></div>
+      <div class="pill"><small>+45 min</small><b id="pillScatto45">--</b></div>
+      <div class="pill"><small>+60 min</small><b id="pillScatto60">--</b></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="h">Registrazioni del giorno</div>
+    <div id="timelineList"></div>
+  </div>
+</div>
+
+<div id="tab-storico" style="display:none"><div class="card"><div class="h">Ultime 30 giornate</div><div id="storicoList"></div></div></div>
+
+<div id="tab-riepilogo" style="display:none">
+  <div class="card"><div class="h" id="rieMeseTit">Mese</div><div id="rieMese"></div></div>
+  <div class="card"><div class="h" id="rieAnnoTit">Anno</div><div id="rieAnno"></div></div>
+</div>
+
+<div class="modal" id="modalGiust"><div class="sheet">
+  <h3>Nuovo giustificativo</h3>
+  <div class="f"><label>Tipo</label>
+    <select id="selTipoGiust" onchange="aggiornaFormGiust()">
+      <option value="SMART WORKING">Smart working</option>
+      <option value="VISITA MEDICA">Visita medica</option>
+      <option value="FERIE">Ferie</option>
+      <option value="EX-FESTIVITÀ">Ex-festività</option>
+      <option value="ORE RECUPERO">Ore recupero straordinari</option>
+      <option value="PAUSA NON TIMBRATA">Pausa non timbrata</option>
+      <option value="STRAORDINARIO PAUSA">Straordinario pausa (autorizzato)</option>
+    </select></div>
+  <div id="swFields"><div class="f"><label>Modalità</label>
+    <select id="swMode" onchange="aggiornaFormGiust()"><option value="G">Giornata intera</option><option value="O">A ore</option></select></div></div>
+  <div id="visitaFields" style="display:none">
+    <div style="display:flex;gap:8px"><div class="f" style="flex:1"><label>Dalle</label><input type="time" id="visitaInizio" value="12:00"></div>
+    <div class="f" style="flex:1"><label>Alle</label><input type="time" id="visitaFine" value="12:30"></div></div>
+    <label class="chk"><input type="checkbox" id="chkTragittoPrima" checked> Tragitto prima (30 min)</label>
+    <label class="chk"><input type="checkbox" id="chkTragittoDopo" checked> Tragitto dopo (30 min)</label>
+  </div>
+  <div id="durataFields" style="display:none"><div class="f"><label>Durata (ore:minuti)</label><input type="text" id="durataManuale" placeholder="es. 1:30"></div></div>
+  <div class="foot"><button class="btn main" onclick="salvaGiustificativo()">Salva</button><button class="btn" onclick="chiudiModal('modalGiust')">Annulla</button></div>
+</div></div>
+
+<div class="modal" id="modalTimb"><div class="sheet">
+  <h3>Timbratura manuale</h3>
+  <div class="f"><label>Tipo</label><select id="selTipoTimb"><option value="E">Entrata</option><option value="U PAUSA">Inizio pausa</option><option value="E PAUSA">Fine pausa</option><option value="U">Uscita</option></select></div>
+  <div class="f"><label>Orario</label><input type="time" id="oraTimbManuale"></div>
+  <div class="foot"><button class="btn main" onclick="salvaTimbraturaManuale()">Salva</button><button class="btn" onclick="chiudiModal('modalTimb')">Annulla</button></div>
+</div></div>
+
+<div class="modal" id="modalSync"><div class="sheet">
+  <h3>Backup e trasferimento dati</h3>
+  <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">I dati restano nel browser. Scarica un backup per spostarli tra PC e telefono.</p>
+  <button class="btn main" style="width:100%;flex-direction:row;justify-content:center" onclick="esportaDati()">Scarica backup</button>
+  <div class="f" style="margin-top:14px"><label>Ripristina da file</label><input type="file" id="fileImport" accept=".json"></div>
+  <div class="foot"><button class="btn" onclick="importaDati()">Ripristina</button><button class="btn" onclick="chiudiModal('modalSync')">Chiudi</button></div>
+</div></div>
+
+<script src="seed.js"></script>
+<script src="calculator.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
