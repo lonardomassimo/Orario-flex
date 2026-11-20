@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aggiornamento Agesp Flex</title>
+<style>body{font:16px system-ui,sans-serif;background:#f4f7f7;color:#12303a;max-width:420px;margin:60px auto;padding:0 18px;text-align:center}p{color:#6b8087;font-size:.9rem}</style></head>
+<body><h2>Aggiornamento in corso…</h2><p id="m">Pulizia della versione memorizzata.</p>
+<script>
+(async()=>{const m=document.getElementById('m');
+try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();
+for(const k of await caches.keys())await caches.delete(k);
+m.textContent='Fatto. I tuoi dati non sono stati toccati. Apro l\'app aggiornata…';
+setTimeout(()=>location.replace('index.html?v='+Date.now()),1200);}
+catch(e){m.textContent='Errore: '+e.message;}})();
+</script></body></html>

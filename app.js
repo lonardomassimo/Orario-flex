@@ -2,6 +2,7 @@
 const K_T = 'orario_flex_timbrature', K_G = 'orario_flex_giustificativi', K_D = 'orario_flex_destinazioni';
 let timbrature = [], giustificativi = [], destinazioni = {};
 let currentDate = new Date();
+const APP_VERSION = '2.2';
 const $ = id => document.getElementById(id);
 const TIPI_DURATA = ['FERIE', 'EX-FESTIVITÀ', 'ORE RECUPERO', 'SMART WORKING'];
 // Soglie annuali (minuti). ORE RECUPERO non ha soglia fissa: dipende dal monte ore accantonato.
@@ -272,8 +273,23 @@ function importaDati() {
   rd.readAsText(f);
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+// Pulisce service worker e cache dell'app (i dati salvati restano intatti) e ricarica
+async function forzaAggiornamento() {
+  try {
+    for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+    for (const k of await caches.keys()) await caches.delete(k);
+  } catch (e) {}
+  location.replace('index.html?v=' + Date.now());
+}
+if ('serviceWorker' in navigator) {
+  const aveva = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (aveva && !window._ric) { window._ric = 1; location.reload(); } });
+}
 window.onload = () => {
   initStorage(); aggiornaSchermataOggi();
+  const hv = document.documentElement.dataset.ver, ok = hv === APP_VERSION;
+  $('ver').textContent = ok ? `Agesp Flex · versione ${APP_VERSION}` : `File non allineati (pagina ${hv}, logica ${APP_VERSION}): apri Backup e usa "Forza aggiornamento"`;
+  $('ver').style.color = ok ? 'var(--muted)' : 'var(--danger)';
   setInterval(() => { if ($('tab-oggi').style.display !== 'none') aggiornaSchermataOggi(); }, 30000);
 };
