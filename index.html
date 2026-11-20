@@ -46,6 +46,7 @@ nav{display:flex;border-bottom:1px solid var(--line);margin-bottom:14px}
 .seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:none;border-radius:8px;padding:8px 4px;font-size:.84rem;color:var(--muted);cursor:pointer}
 .seg button.on{background:var(--card);color:var(--petrol);font-weight:650;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
 .seg+small{display:block;margin-top:6px;font-size:.75rem;color:var(--muted)}
 .actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
 .btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 4px;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
@@ -108,7 +109,7 @@ nav{display:flex;border-bottom:1px solid var(--line);margin-bottom:14px}
   <div id="alertContainer"></div>
 
   <div class="card">
-    <div class="h">Destinazione dello straordinario di oggi</div>
+    <div class="h">Straordinario di oggi: dove va?</div>
     <div class="seg" id="segDest">
       <button data-v="BANCA" onclick="setDest('BANCA')">Monte ore</button>
       <button data-v="PAGAMENTO" onclick="setDest('PAGAMENTO')">Pagamento</button>
@@ -156,17 +157,16 @@ nav{display:flex;border-bottom:1px solid var(--line);margin-bottom:14px}
   <h3>Nuovo giustificativo</h3>
   <div class="f"><label>Tipo</label>
     <select id="selTipoGiust" onchange="aggiornaFormGiust()">
-      <option value="SMART WORKING">Smart working</option>
+      <option value="SMART WORKING">Smart working (a ore)</option>
+      <option value="SCIOPERO">Sciopero (intera giornata)</option>
       <option value="VISITA MEDICA">Visita medica</option>
       <option value="FERIE">Ferie</option>
       <option value="EX-FESTIVITÀ">Ex-festività</option>
       <option value="ORE RECUPERO">Ore recupero straordinari</option>
       <option value="PAUSA NON TIMBRATA">Pausa non timbrata</option>
       <option value="STRAORDINARIO PAUSA">Straordinario pausa (autorizzato)</option>
-    </select></div>
-  <div id="swFields"><div class="f"><label>Modalità</label>
-    <select id="swMode" onchange="aggiornaFormGiust()"><option value="G">Giornata intera</option><option value="O">A ore</option></select></div></div>
-  <div id="visitaFields" style="display:none">
+    </select><small id="limiteInfo" style="display:block;margin-top:4px;font-size:.75rem;color:var(--muted)"></small></div>
+    <div id="visitaFields" style="display:none">
     <div style="display:flex;gap:8px"><div class="f" style="flex:1"><label>Dalle</label><input type="time" id="visitaInizio" value="12:00"></div>
     <div class="f" style="flex:1"><label>Alle</label><input type="time" id="visitaFine" value="12:30"></div></div>
     <label class="chk"><input type="checkbox" id="chkTragittoPrima" checked> Tragitto prima (30 min)</label>

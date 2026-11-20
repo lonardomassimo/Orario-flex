@@ -3,7 +3,9 @@ const K_T = 'orario_flex_timbrature', K_G = 'orario_flex_giustificativi', K_D = 
 let timbrature = [], giustificativi = [], destinazioni = {};
 let currentDate = new Date();
 const $ = id => document.getElementById(id);
-const TIPI_DURATA = ['FERIE', 'EX-FESTIVITÀ', 'ORE RECUPERO'];
+const TIPI_DURATA = ['FERIE', 'EX-FESTIVITÀ', 'ORE RECUPERO', 'SMART WORKING'];
+// Soglie annuali (minuti). ORE RECUPERO non ha soglia fissa: dipende dal monte ore accantonato.
+const LIMITI = { 'FERIE': 168 * 60, 'EX-FESTIVITÀ': 30 * 60, 'VISITA MEDICA': 30 * 60 };
 const isRecupero = t => t === 'ORE RECUPERO' || t === 'ORE RECUPERO STRAORDINARI';
 
 function initStorage() {
@@ -36,6 +38,19 @@ function salvaDati() {
 // Destinazione straordinario (monte ore / pagamento), per giornata
 const getDest = iso => destinazioni[iso] || 'PAGAMENTO';
 function setDest(v) { destinazioni[formatDateISO(currentDate)] = v; salvaDati(); aggiornaSchermataOggi(); }
+
+// Selettore monte ore / pagamento: "Monte ore" si disattiva a limite annuo raggiunto
+function aggiornaDest(iso, strao) {
+  const resto = PARAMETRI.tettoBancaOre - accantonatoPrima(iso), pieno = resto <= 0;
+  const d = pieno ? 'PAGAMENTO' : getDest(iso), F = formatMinutesToHoursMins;
+  document.querySelectorAll('#segDest button').forEach(b => {
+    b.classList.toggle('on', b.dataset.v === d);
+    if (b.dataset.v === 'BANCA') b.disabled = pieno;
+  });
+  $('destNote').textContent = pieno ? 'Limite annuo di 40h raggiunto: lo straordinario va in pagamento'
+    : d === 'BANCA' ? (strao > resto ? `Ancora accantonabili ${F(resto)}: l'eccedenza va in pagamento` : `Monte ore accantonato ${F(accantonatoAnno(iso.slice(0, 4)))} su 40h`)
+    : 'Lo straordinario sarà pagato a fine mese (+30%)';
+}
 
 function aggiornaSchermataOggi() {
   const iso = formatDateISO(currentDate);
@@ -70,12 +85,7 @@ function aggiornaSchermataOggi() {
   $('statStraord').textContent = `${c.straordinarioNettoMin} min`;
   $('pulseOre').style.display = $('pulseStraord').style.display = c.isLive ? 'inline-block' : 'none';
 
-  const d = getDest(iso);
-  document.querySelectorAll('#segDest button').forEach(b => b.classList.toggle('on', b.dataset.v === d));
-  const tot = totaleBanca(iso);
-  $('destNote').textContent = d === 'BANCA'
-    ? `Monte ore accantonato: ${formatMinutesToHoursMins(tot)} su 40h`
-    : 'Lo straordinario sarà pagato a fine mese (+30%)';
+  aggiornaDest(iso, c.straordinarioNettoMin);
 
   $('alertContainer').innerHTML = c.attenzioni.length
     ? `<div class="alert"><b>Da controllare</b>${c.attenzioni.map(a => `<div>• ${a}</div>`).join('')}</div>` : '';
@@ -129,24 +139,39 @@ const apriDialogGiustificativo = () => { aggiornaFormGiust(); $('modalGiust').cl
 const chiudiModal = id => $(id).classList.remove('active');
 
 function aggiornaFormGiust() {
-  const t = $('selTipoGiust').value;
-  $('swFields').style.display = t === 'SMART WORKING' ? 'block' : 'none';
+  const t = $('selTipoGiust').value, iso = formatDateISO(currentDate), r = residuo(t, iso);
   $('visitaFields').style.display = t === 'VISITA MEDICA' ? 'block' : 'none';
-  $('durataFields').style.display = (TIPI_DURATA.includes(t) || (t === 'SMART WORKING' && $('swMode').value === 'O')) ? 'block' : 'none';
+  $('durataFields').style.display = TIPI_DURATA.includes(t) ? 'block' : 'none';
+  $('limiteInfo').textContent = t === 'SCIOPERO' ? `Intera giornata: ${oreGiornata().slice(0, -3)} ore non retribuite`
+    : r === null ? '' : r <= 0 ? 'Soglia raggiunta: inserimento bloccato' : `Residuo disponibile${t === 'SMART WORKING' ? ' questa settimana' : ''}: ${formatMinutesToHoursMins(r)}`;
 }
+const oreGiornata = () => currentDate.getDay() === 5 ? '6:00' : '8:00';
 
 function salvaGiustificativo() {
-  const tipo = $('selTipoGiust').value, n = { data: formatDateISO(currentDate), tipo };
+  const tipo = $('selTipoGiust').value, iso = formatDateISO(currentDate), n = { data: iso, tipo };
   if (tipo === 'VISITA MEDICA') {
     n.oraInizio = $('visitaInizio').value; n.oraFine = $('visitaFine').value;
+    if (!n.oraInizio || !n.oraFine || n.oraFine <= n.oraInizio) return alert('Orario non valido: la fine deve essere dopo l\'inizio.');
     n.tragittoPrima = $('chkTragittoPrima').checked ? '0:30' : '0:00';
     n.tragittoDopo = $('chkTragittoDopo').checked ? '0:30' : '0:00';
-  } else if (tipo === 'SMART WORKING') {
-    // Smart working = ore lavorate da remoto: contano come ore svolte, senza straordinario
-    n.durata = $('swMode').value === 'G' ? (currentDate.getDay() === 5 ? '6:00' : '8:00') : ($('durataManuale').value || '1:00');
-    n.modalita = $('swMode').value === 'G' ? 'giornata' : 'ore';
-  } else if (TIPI_DURATA.includes(tipo)) n.durata = $('durataManuale').value || '1:00';
-  else n.durata = '0:30';
+  } else if (tipo === 'SCIOPERO') {
+    if (giustificativi.some(g => g.data === iso && g.tipo === 'SCIOPERO')) return alert('Sciopero già registrato per questo giorno.');
+    n.durata = oreGiornata();
+  } else if (TIPI_DURATA.includes(tipo)) {
+    const d = $('durataManuale').value.trim() || '1:00', m = /^\d{1,2}:[0-5]\d$/.test(d) ? parseTimeToMinutes(d) : 0;
+    if (!m) return alert('Durata non valida: usa il formato ore:minuti, es. 1:30');
+    if (tipo !== 'SMART WORKING' && m % 15) return alert('Questo giustificativo si prende a quarti d\'ora.');
+    if (tipo === 'FERIE' && m < 30) return alert('Il primo scatto delle ferie è di almeno mezz\'ora.');
+    n.durata = d;
+  } else n.durata = '0:30';
+  const req = uso(n), r = residuo(tipo, iso), F = formatMinutesToHoursMins;
+  if (r !== null && req > r) {
+    return alert(tipo === 'ORE RECUPERO'
+      ? `Ore recupero insufficienti: disponibili ${F(Math.max(0, r))}, richieste ${F(req)}.\nSi sblocca accantonando altro straordinario nel monte ore.`
+      : tipo === 'SMART WORKING'
+      ? `Smart working massimo 8h a settimana (un giorno o due mezze giornate): residuo ${F(Math.max(0, r))}, richieste ${F(req)}.\nInserimento bloccato fino alla prossima settimana.`
+      : `Soglia annuale superata per ${tipo}: residuo ${F(Math.max(0, r))}, richieste ${F(req)}.\nInserimento bloccato fino al nuovo caricamento annuale.`);
+  }
   giustificativi.push(n); salvaDati(); chiudiModal('modalGiust'); aggiornaSchermataOggi();
 }
 
@@ -156,14 +181,39 @@ function giorniConDati() {
 function calcDay(iso) {
   return calcolaGiornata(iso, timbrature.filter(t => t.data === iso), giustificativi.filter(g => g.data === iso), null);
 }
-// Minuti accantonati in monte ore nell'anno, fino alla data indicata inclusa (tetto 40h)
-function totaleBanca(isoFino) {
-  const y = isoFino.slice(0, 4);
-  const s = giorniConDati().filter(d => d.startsWith(y) && d <= isoFino && getDest(d) === 'BANCA')
-    .reduce((a, d) => a + calcDay(d).straordinarioNettoMin, 0);
-  return Math.min(s, PARAMETRI.tettoBancaOre);
+// Ripartizione cronologica dello straordinario: monte ore (tetto 40h/anno) e pagamento
+function ripartoAnno(y) {
+  let resto = PARAMETRI.tettoBancaOre; const out = {};
+  giorniConDati().filter(d => d.startsWith(y)).forEach(d => {
+    const s = calcDay(d).straordinarioNettoMin, ban = getDest(d) === 'BANCA' ? Math.min(s, Math.max(0, resto)) : 0;
+    resto -= ban; out[d] = { ban, pag: s - ban };
+  });
+  return out;
 }
+const sommaBan = (y, ok) => { const o = ripartoAnno(y); return Object.keys(o).filter(ok).reduce((a, d) => a + o[d].ban, 0); };
+const accantonatoAnno = y => sommaBan(y, () => true);
+const accantonatoPrima = iso => sommaBan(iso.slice(0, 4), d => d < iso);
 const durMin = g => g.durata ? (parseTimeToMinutes(g.durata) || 0) : Math.max(0, (parseTimeToMinutes(g.oraFine) || 0) - (parseTimeToMinutes(g.oraInizio) || 0));
+// Minuti scalati dal monte ore del giustificativo (visita medica: include i tragitti)
+const uso = g => durMin(g) + (parseTimeToMinutes(g.tragittoPrima) || 0) + (parseTimeToMinutes(g.tragittoDopo) || 0);
+const usatoAnno = (tipo, y) => giustificativi.filter(g => g.data.startsWith(y) && (tipo === 'ORE RECUPERO' ? isRecupero(g.tipo) : g.tipo === tipo)).reduce((a, g) => a + uso(g), 0);
+// Minuti ancora disponibili per il giustificativo (null = nessuna soglia)
+function residuo(tipo, iso) {
+  const y = iso.slice(0, 4);
+  if (tipo === 'ORE RECUPERO') return sommaBan(y, d => d <= iso) - usatoAnno(tipo, y);
+  if (tipo === 'SMART WORKING') return SW_SETTIMANA - usoSettimana(iso);
+  const l = limite(tipo, y);
+  return l === null ? null : l - usatoAnno(tipo, y);
+}
+const SW_SETTIMANA = 8 * 60; // un giorno a settimana o due mezze giornate
+const lunediDi = iso => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return formatDateISO(d); };
+const usoSettimana = iso => giustificativi.filter(g => g.tipo === 'SMART WORKING' && lunediDi(g.data) === lunediDi(iso)).reduce((a, g) => a + uso(g), 0);
+// Lavorando il 4 novembre (timbrature o smart working) maturano altre 8h di ex-festività
+const lavoratoIl4Nov = y => timbrature.some(t => t.data === `${y}-11-04`) || giustificativi.some(g => g.data === `${y}-11-04` && g.tipo === 'SMART WORKING');
+const extra4Nov = y => lavoratoIl4Nov(y) ? 8 * 60 : 0;
+const limite = (tipo, y) => LIMITI[tipo] === undefined ? null : LIMITI[tipo] + (tipo === 'EX-FESTIVITÀ' ? extra4Nov(y) : 0);
+// Ticket: ore in sede + ore di smart working >= 4h
+const ticketGiorno = d => calcDay(d).oreLavorateMin + giustificativi.filter(g => g.data === d && g.tipo === 'SMART WORKING').reduce((a, g) => a + uso(g), 0) >= 240;
 
 function caricaStorico() {
   const box = $('storicoList'); box.innerHTML = '';
@@ -179,30 +229,27 @@ function caricaStorico() {
 }
 
 function caricaRiepilogo() {
-  const y = String(currentDate.getFullYear()), ym = formatDateISO(currentDate).slice(0, 7);
+  const y = String(currentDate.getFullYear()), ym = formatDateISO(currentDate).slice(0, 7), F = formatMinutesToHoursMins;
   const nomeMese = currentDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
   $('rieMeseTit').textContent = nomeMese.charAt(0).toUpperCase() + nomeMese.slice(1);
   $('rieAnnoTit').textContent = `Saldi ${y}`;
-  const m = { lav: 0, giu: 0, ban: 0, pag: 0, sw: 0, tk: 0 };
+  const rp = ripartoAnno(y), m = { lav: 0, giu: 0, ban: 0, pag: 0, tk: 0 };
   giorniConDati().filter(d => d.startsWith(ym)).forEach(d => {
-    const r = calcDay(d); m.lav += r.oreLavorateMin; m.giu += r.oreGiustificateMin;
-    getDest(d) === 'BANCA' ? m.ban += r.straordinarioNettoMin : m.pag += r.straordinarioNettoMin;
-    if (r.ticket) m.tk++;
+    const r = calcDay(d); m.lav += r.oreLavorateMin; m.giu += r.oreGiustificateMin; m.ban += rp[d].ban; m.pag += rp[d].pag;
+    if (ticketGiorno(d)) m.tk++;
   });
-  giustificativi.filter(g => g.data.startsWith(ym) && g.tipo === 'SMART WORKING').forEach(g => m.sw += durMin(g));
-  const F = formatMinutesToHoursMins, row = (a, b) => `<div class="row"><span>${a}</span><b>${b}</b></div>`;
-  $('rieMese').innerHTML = row('Ore lavorate in sede', F(m.lav)) + row('di cui smart working', F(m.sw)) + row('Ore giustificate', F(m.giu))
-    + row('Straordinario in monte ore', F(m.ban)) + row('Straordinario in pagamento', F(m.pag)) + row('Ticket maturati', m.tk);
+  const mese = t => giustificativi.filter(g => g.data.startsWith(ym) && g.tipo === t).reduce((a, g) => a + uso(g), 0);
+  const sw = mese('SMART WORKING'), sc = mese('SCIOPERO'), row = (a, b) => `<div class="row"><span>${a}</span><b>${b}</b></div>`;
+  $('rieMese').innerHTML = row('Ore lavorate in sede', F(m.lav)) + row('Smart working', F(sw)) + row('Ore giustificate', F(m.giu - sw - sc))
+    + row('Sciopero (non retribuito)', F(sc)) + row('Straordinario in monte ore', F(m.ban)) + row('Straordinario in pagamento', F(m.pag)) + row('Ticket maturati', m.tk);
 
-  const banca = totaleBanca(`${y}-12-31`);
-  const usate = giustificativi.filter(g => g.data.startsWith(y) && isRecupero(g.tipo)).reduce((a, g) => a + durMin(g), 0);
-  const sum = tipo => giustificativi.filter(g => g.data.startsWith(y) && g.tipo === tipo).reduce((a, g) => a + durMin(g), 0);
+  const acc = accantonatoAnno(y), usate = usatoAnno('ORE RECUPERO', y);
   const bar = (lbl, usedMin, maxH, note) => `<div class="f"><div class="row" style="border:0;padding:0"><span>${lbl}</span><b>${F(usedMin)} / ${maxH}h</b></div>
     <div class="bar"><i style="width:${Math.min(100, usedMin / (maxH * 60) * 100)}%"></i></div>${note ? `<small style="color:var(--danger)">${note}</small>` : ''}</div>`;
-  $('rieAnno').innerHTML = bar('Monte ore accantonato', banca, 40, banca >= 2400 ? 'Tetto annuo raggiunto' : '')
-    + bar('Ore recupero usate', usate, 40, usate > banca ? 'Ore recupero superiori al monte ore disponibile' : '')
-    + bar('Ferie usate', sum('FERIE'), 168) + bar('Ex-festività usate', sum('EX-FESTIVITÀ'), 30) + bar('Visite mediche', sum('VISITA MEDICA'), 30)
-    + row('Smart working annuo', F(sum('SMART WORKING')));
+  $('rieAnno').innerHTML = bar('Monte ore accantonato', acc, 40, acc >= PARAMETRI.tettoBancaOre ? 'Tetto annuo raggiunto' : '')
+    + bar('Ore recupero usate', usate, 40, usate > acc ? 'Superiori al monte ore accantonato' : '')
+    + bar('Ferie usate', usatoAnno('FERIE', y), 168) + bar(extra4Nov(y) ? 'Ex-festività usate (incl. +8h del 4 novembre)' : 'Ex-festività usate', usatoAnno('EX-FESTIVITÀ', y), limite('EX-FESTIVITÀ', y) / 60) + bar('Visite mediche', usatoAnno('VISITA MEDICA', y), 30)
+    + row('Smart working annuo', F(usatoAnno('SMART WORKING', y))) + row('Sciopero annuo', F(usatoAnno('SCIOPERO', y)));
 }
 
 $('btnSync').onclick = () => $('modalSync').classList.add('active');
