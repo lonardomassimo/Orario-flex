@@ -1,190 +1,173 @@
 <!DOCTYPE html>
-<html lang="it" data-ver="3.0">
+<html lang="it" data-ver="4.0">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agesp Flex</title>
+<title>Cronoflex</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#0b2a4a">
+<meta name="theme-color" content="#1f8fd0">
 <style>
-:root{--navy:#0b2a4a;--azure:#1a8fd6;--green:#3fa66b;--amber:#f5a524;--bg:#eaf0f6;--card:#fff;--ink:#0b2a4a;--muted:#64809b;--line:#d9e3ee;--danger:#d64545}
+:root{--blue:#1f8fd0;--navy:#0b3a63;--green:#2e9d6a;--amber:#f5a524;--bg:#f2f6fa;--card:#fff;--ink:#0b3a63;--muted:#6482a0;--line:#dbe6f0;--danger:#d64545}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);max-width:560px;margin:0 auto;padding:12px 14px 40px}
-button,input,select{font:inherit;color:inherit}
-header{display:flex;align-items:center;gap:10px;padding:2px 0 12px}
-header img{width:42px;height:42px;border-radius:11px}
-.brand{flex:1;line-height:1.2}.brand b{font-size:1.1rem;letter-spacing:-.01em}
-.brand span{display:block;font-size:.7rem;color:var(--muted)}
-.ghost{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 11px;font-size:.8rem;color:var(--muted);cursor:pointer}
-nav{display:flex;gap:6px;margin-bottom:12px}
-.nav-btn{flex:1;border:0;background:none;padding:9px 0;border-radius:10px;font-size:.88rem;color:var(--muted);cursor:pointer}
-.nav-btn.active{background:var(--navy);color:#fff;font-weight:600}
-.card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(11,42,74,.08)}
+body{font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);padding:0 14px 40px;max-width:1100px;margin:0 auto}
+button,input,select,textarea{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;gap:10px;padding:10px 0}
+header img{width:40px;height:40px}
+.brand{flex:1;line-height:1.15}.brand b{font-size:1.1rem;letter-spacing:-.01em}.brand span{display:block;font-size:.68rem;color:var(--muted)}
+.hb{background:var(--card);border:0;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 2px rgba(11,58,99,.12)}
+.drawer{position:fixed;inset:0;z-index:20;background:rgba(11,58,99,.45);display:none}.drawer.open{display:block}
+.drawer nav{position:absolute;left:0;top:0;bottom:0;width:min(290px,86vw);background:var(--card);padding:16px 12px;overflow:auto}
+.drawer h4{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:14px 8px 4px}
+.drawer button{display:block;width:100%;text-align:left;background:none;border:0;padding:11px 10px;border-radius:10px;font-size:.95rem;cursor:pointer}
+.drawer button:hover,.drawer button:focus-visible{background:var(--bg);outline:none}
+.pg{display:none}.pg.on{display:block}
+.card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(11,58,99,.08)}
 .h{font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:8px}
-.date-nav{display:flex;align-items:center;gap:6px;margin-bottom:10px}
-.date-nav .t{flex:1;text-align:center;font-weight:600;font-size:.92rem}
-.date-nav button{background:var(--card);border:0;border-radius:10px;width:34px;height:34px;cursor:pointer;box-shadow:0 1px 2px rgba(11,42,74,.1)}
-.date-nav .ghost{width:auto;padding:0 10px}
-/* Hero a fasi: i dati chiave in grande */
-.hero{background:linear-gradient(160deg,#0b2a4a,#12426f);color:#fff;border-radius:18px;padding:16px;margin-bottom:12px}
-.tag{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:#8fc9ee;margin-bottom:10px}
-.hl{padding:18px 0;text-align:center;color:#b9d3ea}
+.datehead{display:flex;align-items:center;gap:8px;margin:4px 0 12px}
+.datehead .t{flex:1;text-align:center}
+.datehead #dWeek{display:block;font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);font-weight:700}
+.datehead #dDay{display:block;font-size:1.75rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+#dBadges{margin-top:4px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.arr{background:var(--card);border:0;border-radius:10px;width:38px;height:38px;cursor:pointer;box-shadow:0 1px 2px rgba(11,58,99,.12);font-size:1.1rem}
+.hero{background:linear-gradient(160deg,#0b3a63,#145a91);color:#fff;border-radius:18px;padding:16px;margin-bottom:12px}
+.tag{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:#8fd0f2;margin-bottom:10px}
+.hl{padding:18px 0;text-align:center;color:#bcdcf1}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.big small{display:block;font-size:.76rem;color:#9ec3e0}
-.big b{display:block;font-size:2.35rem;line-height:1.05;font-weight:750;letter-spacing:-.03em;margin:2px 0}
-.big em{font-style:normal;font-size:.72rem;color:#9ec3e0}
-.lbl{font-size:.76rem;color:#9ec3e0;margin:14px 0 6px}
+.big small{display:block;font-size:.76rem;color:#9fd0ee}.big b{display:block;font-size:2.35rem;line-height:1.05;font-weight:750;letter-spacing:-.03em;margin:2px 0}.big em{font-style:normal;font-size:.72rem;color:#9fd0ee}
+.lbl{font-size:.76rem;color:#9fd0ee;margin:14px 0 6px}
 .pills{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.pills div{background:rgba(255,255,255,.1);border-radius:10px;padding:7px;text-align:center}
-.pills small{display:block;font-size:.68rem;color:#9ec3e0}.pills b{font-size:1.1rem;color:var(--amber)}
-.sub{margin-top:10px;font-size:.78rem;color:#b9d3ea}
-.alert{background:#fff6e5;border-left:3px solid var(--amber);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:.82rem}
+.pills div{background:rgba(255,255,255,.12);border-radius:10px;padding:7px;text-align:center}.pills small{display:block;font-size:.68rem;color:#9fd0ee}.pills b{font-size:1.1rem;color:var(--amber)}
+.sub{margin-top:10px;font-size:.78rem;color:#bcdcf1}
+.alert{background:#fff6e5;border-left:3px solid var(--amber);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:.82rem}.alert a{color:var(--blue);font-weight:600}
 .warn{background:#fdeaea;color:var(--danger);border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:.84rem;font-weight:600}
 .seg{display:flex;background:var(--bg);border-radius:11px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:none;border-radius:9px;padding:9px 4px;font-size:.85rem;color:var(--muted);cursor:pointer}
-.seg button.on{background:var(--azure);color:#fff;font-weight:650}
-.seg button:disabled{opacity:.35;cursor:not-allowed}
+.seg button.on{background:var(--blue);color:#fff;font-weight:650}.seg button:disabled{opacity:.35;cursor:not-allowed}
 .note{display:block;margin-top:6px;font-size:.75rem;color:var(--muted)}
 .actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}
-.btn{border:0;background:var(--card);border-radius:12px;padding:10px 4px;font-size:.82rem;font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(11,42,74,.1)}
-.btn.main{background:var(--azure);color:#fff}
-.btn.sec{background:none;box-shadow:none;border:1px dashed var(--line);color:var(--muted);font-weight:500;flex:1}
+.btn{border:0;background:var(--card);border-radius:12px;padding:10px 6px;font-size:.82rem;font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(11,58,99,.12)}
+.btn.main{background:var(--blue);color:#fff}.btn.sec{background:none;box-shadow:none;border:1px dashed var(--line);color:var(--muted);font-weight:500;flex:1}
 .btn:active{transform:scale(.98)}
-.btn:focus-visible,.nav-btn:focus-visible,.ib:focus-visible,.chip:focus-visible,.seg button:focus-visible{outline:2px solid var(--azure);outline-offset:2px}
-.tl{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.88rem}
-.tl:last-child{border:0}
-.nm{flex:1}
-.bd{font-size:.62rem;font-weight:700;letter-spacing:.04em;padding:3px 6px;border-radius:6px}
-.bd.t{background:#e0f0fb;color:var(--azure)}.bd.g{background:#e3f4ea;color:var(--green)}
-.ib{background:none;border:0;color:var(--muted);cursor:pointer;padding:5px;border-radius:8px;display:flex}
-.ib.d{color:var(--danger)}
-.row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:.88rem;border-bottom:1px solid var(--line)}
-.row:last-child{border:0}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.tl{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.88rem}.tl:last-child{border:0}
+.nm{flex:1}.nm small{color:var(--muted)}
+.bd{font-size:.62rem;font-weight:700;letter-spacing:.04em;padding:3px 6px;border-radius:6px;white-space:nowrap}
+.bd.t{background:#e0f0fb;color:var(--blue)}.bd.g{background:#e1f4ea;color:var(--green)}.bd.n{background:#e8edf3;color:var(--muted)}.bd.r{background:#efe6fb;color:#7a45c2}.bd.x{background:#fdeaea;color:var(--danger)}
+.ib{background:none;border:0;color:var(--muted);cursor:pointer;padding:5px;border-radius:8px;display:flex}.ib.d{color:var(--danger)}
+.row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:.88rem;border-bottom:1px solid var(--line)}.row:last-child{border:0}.row b{text-align:right}
 details.card summary{cursor:pointer;font-size:.84rem;font-weight:600;color:var(--muted)}
 .bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin:5px 0}.bar i{display:block;height:100%;background:var(--green)}
-.day{background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(11,42,74,.08)}
-.dh{display:flex;justify-content:space-between;align-items:center}
+.day{background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(11,58,99,.08)}.day.quiet{padding:8px 12px;opacity:.7}
+.dh{display:flex;justify-content:space-between;align-items:center;gap:6px}
 .dm{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.8rem;color:var(--muted);margin-top:4px}.dm .am{color:#c47d0a;font-weight:700}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.chip{border:1px solid var(--danger);color:var(--danger);background:#fff;border-radius:20px;padding:4px 10px;font-size:.76rem;cursor:pointer}
-.modal{display:none;position:fixed;inset:0;background:rgba(11,42,74,.5);z-index:9;align-items:center;justify-content:center;padding:16px}
-.modal.active{display:flex}
-.sheet{background:var(--card);border-radius:18px;padding:18px;width:100%;max-width:420px;max-height:90vh;overflow:auto}
+.chip{border:1px solid var(--danger);color:var(--danger);background:#fff;border-radius:20px;padding:4px 10px;font-size:.76rem;cursor:pointer;text-align:left}
+.nav2{display:flex;gap:6px;align-items:center;margin-bottom:12px}.nav2 select{flex:1;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.nav2 .ib{background:var(--card);box-shadow:0 1px 2px rgba(11,58,99,.12);width:38px;height:38px;justify-content:center;font-size:1.1rem}
+.modal{display:none;position:fixed;inset:0;background:rgba(11,58,99,.5);z-index:30;align-items:center;justify-content:center;padding:16px}.modal.active{display:flex}
+.sheet{background:var(--card);border-radius:18px;padding:18px;width:100%;max-width:440px;max-height:90vh;overflow:auto}
 .sheet h3{font-size:1rem;margin-bottom:12px}
 .f{margin-bottom:10px}.f label{display:block;font-size:.76rem;color:var(--muted);margin-bottom:3px}
-.f input[type=text],.f input[type=time],.f input[type=date],.f select{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;background:#fff}
-.chk{display:flex;gap:6px;align-items:center;font-size:.86rem;margin:4px 0}
+input[type=text],input[type=time],input[type=date],select,textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.chk{display:flex;gap:6px;align-items:center;font-size:.86rem;margin:4px 0}.chk input{width:auto}
 .foot{display:flex;gap:8px;margin-top:14px}.foot .btn{flex:1;padding:11px}
 .empty{color:var(--muted);font-size:.84rem;padding:4px 0}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.inl{display:flex;gap:6px;margin-top:8px}.inl .btn{padding:0 14px}
+#toast{position:fixed;left:50%;bottom:18px;transform:translate(-50%,30px);background:var(--navy);color:#fff;padding:10px 16px;border-radius:12px;font-size:.84rem;max-width:92vw;opacity:0;pointer-events:none;transition:.25s;z-index:40}#toast.on{opacity:1;transform:translate(-50%,0)}
+@media(min-width:900px){#p-oggi.on{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}.pg.on:not(#p-oggi){max-width:720px;margin:0 auto}}
+@media(orientation:landscape) and (max-height:520px){.big b{font-size:1.8rem}.hero{padding:12px}}
+@media print{body *{visibility:hidden}#modalReport,#modalReport *{visibility:visible}#modalReport{position:absolute;inset:0;background:#fff}.noprint{display:none!important}}
 </style>
 </head>
 <body>
 <header>
-  <img src="icon.svg" alt="Logo Agesp Flex">
-  <div class="brand"><b>Agesp Flex</b><span>Orario flessibile · AGESP SPA</span><span>by arch. Lonardo Massimo</span></div>
-  <button class="ghost" id="btnSync">Backup</button>
+  <button class="hb" onclick="apriMenu()" aria-label="Menu"><svg width="22" height="22" viewBox="0 0 24 24" stroke="#0b3a63" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <img src="icon.svg" alt="Logo Cronoflex">
+  <div class="brand"><b>Cronoflex</b><span id="titPag">Oggi</span><span>per AGESP SPA · by arch. Lonardo Massimo</span></div>
+  <button class="hb" onclick="annulla()" aria-label="Annulla ultima operazione" title="Annulla ultima operazione"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0b3a63" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
 </header>
 
-<nav>
-  <button class="nav-btn active" data-t="tab-oggi" onclick="switchTab('tab-oggi')">Oggi</button>
-  <button class="nav-btn" data-t="tab-storico" onclick="switchTab('tab-storico')">Storico</button>
-  <button class="nav-btn" data-t="tab-riepilogo" onclick="switchTab('tab-riepilogo')">Riepilogo</button>
-</nav>
+<div class="drawer" id="drawer" onclick="if(event.target===this)apriMenu()"><nav>
+  <h4>Pagine</h4>
+  <button onclick="pagina('oggi')">Oggi</button><button onclick="pagina('agenda')">Agenda</button><button onclick="pagina('storico')">Storico</button><button onclick="pagina('riepilogo')">Riepilogo</button><button onclick="pagina('busta')">Verifica busta paga</button><button onclick="pagina('rep')">Reperibilità</button>
+  <h4>Strumenti</h4>
+  <button onclick="annulla();apriMenu()">↶ Annulla ultima operazione</button><button onclick="apriPZ()">Imposta a zero i contatori</button><button onclick="abilitaNotifiche()">Attiva le notifiche</button><button onclick="apriSync()">Backup e ripristino</button><button onclick="forzaAggiornamento()">Forza aggiornamento app</button>
+</nav></div>
 
-<div id="tab-oggi">
-  <div class="date-nav">
-    <button onclick="cambiaGiorno(-1)" aria-label="Giorno precedente">‹</button>
-    <div class="t" id="currentDateLabel"></div>
-    <button onclick="cambiaGiorno(1)" aria-label="Giorno successivo">›</button>
-    <button class="ghost" onclick="vaiAOggi()">Oggi</button>
-  </div>
-  <div class="hero" id="hero"></div>
-  <div class="card" id="destCard" style="display:none"></div>
-  <div id="alertContainer"></div>
-  <div class="actions">
-    <button class="btn main" onclick="quickTimbra('E')">Entrata</button>
-    <button class="btn" onclick="quickTimbra('U PAUSA')">Inizio pausa</button>
-    <button class="btn" onclick="quickTimbra('E PAUSA')">Fine pausa</button>
-    <button class="btn" onclick="quickTimbra('U')">Uscita</button>
-  </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button class="btn sec" onclick="apriDialogGiustificativo()">+ Giustificativo</button>
-    <button class="btn sec" onclick="apriTimb()">+ Timbratura manuale</button>
-  </div>
-  <div class="card" id="regList"></div>
-  <details class="card"><summary>Recap della giornata</summary><div id="recap" style="margin-top:8px"></div></details>
-</div>
+<div id="repBanner"></div>
 
-<div id="tab-storico" style="display:none"><div class="h">Ultime 30 giornate</div><div id="storicoList"></div></div>
-
-<div id="tab-riepilogo" style="display:none">
-  <div class="card"><div class="h" id="rieMeseTit">Mese</div><div id="rieMese"></div></div>
-  <div class="card"><div class="h" id="rieAnnoTit">Anno</div><div id="rieAnno"></div></div>
-  <div class="card"><div class="h">Punto zero</div><small class="note" id="pzInfo" style="margin:0 0 8px"></small>
-    <button class="btn" style="width:100%" onclick="apriPZ()">Imposta punto zero dei contatori</button></div>
-</div>
-
-<div class="modal" id="modalGiust"><div class="sheet">
-  <h3>Nuovo giustificativo</h3>
-  <div class="f"><label>Tipo</label>
-    <select id="selTipoGiust" onchange="aggiornaFormGiust()">
-      <option value="SMART WORKING">Smart working (a ore)</option>
-      <option value="SCIOPERO">Sciopero (intera giornata)</option>
-      <option value="VISITA MEDICA">Visita medica</option>
-      <option value="FERIE">Ferie</option>
-      <option value="EX-FESTIVITÀ">Ex-festività</option>
-      <option value="ORE 4 NOVEMBRE">Ore 4 novembre (extra)</option>
-      <option value="ORE RECUPERO">Ore recupero straordinari</option>
-      <option value="PAUSA NON TIMBRATA">Pausa non timbrata</option>
-      <option value="STRAORDINARIO PAUSA">Straordinario pausa (autorizzato)</option>
-    </select><small id="limiteInfo" style="display:block;margin-top:4px;font-size:.75rem;color:var(--muted)"></small></div>
-  <div id="visitaFields" style="display:none">
-    <div class="two"><div class="f"><label>Dalle</label><input type="time" id="visitaInizio" value="12:00"></div>
-    <div class="f"><label>Alle</label><input type="time" id="visitaFine" value="12:30"></div></div>
-    <label class="chk"><input type="checkbox" id="chkTragittoPrima" checked> Tragitto prima (30 min)</label>
-    <label class="chk"><input type="checkbox" id="chkTragittoDopo" checked> Tragitto dopo (30 min)</label>
+<main>
+<section class="pg on" id="p-oggi">
+  <div>
+    <div class="datehead"><button class="arr" onclick="cambiaGiorno(-1)" aria-label="Giorno precedente">‹</button><div class="t"><span id="dWeek"></span><span id="dDay"></span><div id="dBadges"></div></div><button class="arr" onclick="cambiaGiorno(1)" aria-label="Giorno successivo">›</button></div>
+    <div style="text-align:center;margin:-6px 0 10px"><button class="arr" style="width:auto;padding:0 14px;font-size:.8rem" onclick="vaiAOggi()">Vai a oggi</button></div>
+    <div class="hero" id="hero"></div>
+    <div class="card" id="destCard" style="display:none"></div>
+    <div id="alertContainer"></div>
+    <div class="actions">
+      <button class="btn main" onclick="quickTimbra('E')">Entrata</button><button class="btn" onclick="quickTimbra('U PAUSA')">Inizio pausa</button><button class="btn" onclick="quickTimbra('E PAUSA')">Fine pausa</button><button class="btn" onclick="quickTimbra('U')">Uscita</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px"><button class="btn sec" onclick="apriDialogGiustificativo()">+ Giustificativo</button><button class="btn sec" onclick="apriTimb()">+ Timbratura manuale</button></div>
+    <div class="card" id="regList"></div>
   </div>
+  <div>
+    <div class="card"><div class="h">Agenda di oggi</div><div id="agendaGiorno"></div><div class="inl"><button class="btn sec" style="padding:8px" onclick="apriEv()">+ Impegno / appuntamento</button></div></div>
+    <div class="card"><div class="h">Da fare oggi</div><div id="todoList"></div><div class="inl"><input type="text" id="todoIn" placeholder="Nuova cosa da fare" onkeydown="if(event.key==='Enter')addTodo()"><button class="btn main" onclick="addTodo()">+</button></div></div>
+    <div class="card"><div class="h">Attività svolte</div><div id="attList"></div>
+      <div class="f" style="margin-top:8px"><select id="attCat"><option>Manutenzione ordinaria AGESP</option><option>Manutenzione straordinaria AGESP</option><option>Manutenzione ordinaria Comune</option><option>Manutenzione straordinaria Comune</option></select></div>
+      <textarea id="attNote" rows="2" placeholder="Note: dettaglio del lavoro svolto"></textarea><div class="inl"><button class="btn main" style="padding:9px" onclick="addAtt()">Aggiungi attività</button></div></div>
+    <details class="card"><summary>Recap della giornata</summary><div id="recap" style="margin-top:8px"></div></details>
+  </div>
+</section>
+
+<section class="pg" id="p-agenda"><div id="agNav"></div><div class="card"><div id="agList"></div><div class="inl"><button class="btn main" style="padding:9px" onclick="apriEv()">+ Nuovo impegno</button></div></div></section>
+<section class="pg" id="p-storico"><div class="h">Ultimi 45 giorni — tocca un avviso per sistemare la giornata</div><div id="storicoList"></div></section>
+<section class="pg" id="p-riepilogo"><div id="rieNav"></div><div class="card" id="rieMese"></div><div class="card" id="rieAnno"></div><div class="card"><div class="h">Punto zero</div><small class="note" id="pzInfo" style="margin:0 0 8px"></small><button class="btn" style="width:100%" onclick="apriPZ()">Imposta a zero i contatori</button></div></section>
+<section class="pg" id="p-busta"><div id="bNav"></div><div class="card"><div class="h">Confronto con la busta paga</div><p class="note" style="margin:0 0 10px">Inserisci i valori letti in busta: l'app li confronta con i suoi. La lettura automatica del PDF richiede un cedolino di esempio.</p><div id="bForm"></div><button class="btn main" style="width:100%" onclick="salvaBusta()">Confronta</button><div id="bEsito" style="margin-top:10px"></div><button class="btn" style="width:100%;margin-top:10px" id="bVer" onclick="toggleVerBusta()"></button></div></section>
+<section class="pg" id="p-rep"><div id="rpNav"></div><div class="card"><div class="h">Settimane di reperibilità</div><div id="rpList"></div><div class="two" style="margin-top:10px"><div class="f"><label>Dal</label><input type="date" id="rpDa"></div><div class="f"><label>Al</label><input type="date" id="rpA"></div></div><button class="btn main" style="width:100%" onclick="addRep()">Aggiungi reperibilità</button><p class="note" id="rpOre" style="margin-top:10px"></p><p class="note">Nei giorni di reperibilità, aggiungendo o modificando una timbratura compare il flag per contarla nel contatore separato.</p></div></section>
+</main>
+
+<div class="modal" id="modalGiust"><div class="sheet"><h3>Nuovo giustificativo</h3>
+  <div class="f"><label>Tipo</label><select id="selTipoGiust" onchange="aggiornaFormGiust()"><option value="SMART WORKING">Smart working (a ore)</option><option value="SCIOPERO">Sciopero (intera giornata)</option><option value="VISITA MEDICA">Visita medica</option><option value="FERIE">Ferie</option><option value="EX-FESTIVITÀ">Ex-festività</option><option value="ORE 4 NOVEMBRE">Ore 4 novembre (extra)</option><option value="ORE RECUPERO">Ore recupero straordinari</option><option value="PAUSA NON TIMBRATA">Pausa non timbrata</option><option value="STRAORDINARIO PAUSA">Straordinario pausa (autorizzato)</option></select><small id="limiteInfo" class="note"></small></div>
+  <div id="visitaFields" style="display:none"><div class="two"><div class="f"><label>Dalle</label><input type="time" id="visitaInizio" value="12:00"></div><div class="f"><label>Alle</label><input type="time" id="visitaFine" value="12:30"></div></div><label class="chk"><input type="checkbox" id="chkTragittoPrima" checked> Tragitto prima (30 min)</label><label class="chk"><input type="checkbox" id="chkTragittoDopo" checked> Tragitto dopo (30 min)</label></div>
   <div id="durataFields" style="display:none"><div class="f"><label>Durata (ore:minuti)</label><input type="text" id="durataManuale" placeholder="es. 1:30"></div></div>
-  <div class="foot"><button class="btn main" onclick="salvaGiustificativo()">Salva</button><button class="btn" onclick="chiudiModal('modalGiust')">Annulla</button></div>
-</div></div>
+  <div class="foot"><button class="btn main" onclick="salvaGiustificativo()">Salva</button><button class="btn" onclick="chiudiModal('modalGiust')">Annulla</button></div></div></div>
 
-<div class="modal" id="modalTimb"><div class="sheet">
-  <h3 id="titTimb">Aggiungi timbratura</h3>
+<div class="modal" id="modalTimb"><div class="sheet"><h3 id="titTimb">Aggiungi timbratura</h3>
   <div class="f"><label>Tipo</label><select id="selTipoTimb"><option value="E">Entrata</option><option value="U PAUSA">Inizio pausa</option><option value="E PAUSA">Fine pausa</option><option value="U">Uscita</option><option value="U VISITA MEDICA">Uscita visita medica</option><option value="E VISITA MEDICA">Rientro visita medica</option></select></div>
   <div class="f"><label>Orario</label><input type="time" id="oraTimbManuale"></div>
-  <div class="foot"><button class="btn main" onclick="salvaTimbraturaManuale()">Salva</button><button class="btn" onclick="chiudiModal('modalTimb')">Annulla</button></div>
-</div></div>
+  <label class="chk"><input type="checkbox" id="chkMancata"> Mancata timbratura (se ne tollera una al mese)</label>
+  <label class="chk" id="rowRep"><input type="checkbox" id="chkRep"> In reperibilità (conta nel contatore separato)</label>
+  <div class="foot"><button class="btn main" onclick="salvaTimbraturaManuale()">Salva</button><button class="btn" onclick="chiudiModal('modalTimb')">Annulla</button></div></div></div>
 
-<div class="modal" id="modalPZ"><div class="sheet">
-  <h3>Punto zero dei contatori</h3>
-  <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px">Se non hai registrato tutti i giorni, indica i valori reali a una certa data: da lì i contatori ripartono (formato ore:minuti, es. 12:30).</p>
+<div class="modal" id="modalEv"><div class="sheet"><h3>Impegno / appuntamento</h3>
+  <div class="two"><div class="f"><label>Data</label><input type="date" id="evData"></div><div class="f"><label>Ora</label><input type="time" id="evOra"></div></div>
+  <div class="f"><label>Titolo</label><input type="text" id="evTitolo"></div><div class="f"><label>Dove</label><input type="text" id="evLuogo"></div>
+  <div class="f"><label>Tipo</label><select id="evTipo"><option>Lavoro</option><option>Appuntamento</option></select></div>
+  <label class="chk"><input type="checkbox" id="evFuori"> Fuori sede</label>
+  <div class="foot"><button class="btn main" onclick="salvaEv()">Salva</button><button class="btn" onclick="chiudiModal('modalEv')">Annulla</button></div></div></div>
+
+<div class="modal" id="modalPZ"><div class="sheet"><h3>Imposta a zero i contatori</h3>
+  <p class="note" style="margin:0 0 10px">Se non hai registrato tutti i giorni, indica i valori reali a una data: da lì i contatori ripartono (ore:minuti, es. 12:30).</p>
   <div class="f"><label>Data del punto zero</label><input type="date" id="pzData"></div>
-  <div class="two">
-    <div class="f"><label>Ferie già usate</label><input type="text" id="pzFerie" placeholder="0:00"></div>
-    <div class="f"><label>Ex-festività usate</label><input type="text" id="pzEx" placeholder="0:00"></div>
-    <div class="f"><label>Visite mediche usate</label><input type="text" id="pzVisite" placeholder="0:00"></div>
-    <div class="f"><label>Ore 4 novembre usate</label><input type="text" id="pzNov4" placeholder="0:00"></div>
-    <div class="f"><label>Ore recupero usate</label><input type="text" id="pzRec" placeholder="0:00"></div>
-    <div class="f"><label>Monte ore accantonato</label><input type="text" id="pzBanca" placeholder="0:00"></div>
-  </div>
-  <label class="chk"><input type="checkbox" id="pzLav"> Ho lavorato il 4 novembre (maturano 8h extra)</label>
-  <div class="foot"><button class="btn main" onclick="salvaPZ()">Salva</button><button class="btn" onclick="rimuoviPZ()">Rimuovi</button><button class="btn" onclick="chiudiModal('modalPZ')">Annulla</button></div>
-</div></div>
+  <div class="two"><div class="f"><label>Ferie usate quest'anno</label><input type="text" id="pzFerie"></div><div class="f"><label>Ferie riportate dall'anno scorso</label><input type="text" id="pzFerieRip"></div>
+  <div class="f"><label>Ex-festività usate</label><input type="text" id="pzEx"></div><div class="f"><label>Visite mediche usate</label><input type="text" id="pzVisite"></div>
+  <div class="f"><label>Ore 4 novembre usate</label><input type="text" id="pzNov4"></div><div class="f"><label>Ore recupero usate</label><input type="text" id="pzRec"></div>
+  <div class="f"><label>Accantonato quest'anno</label><input type="text" id="pzBanca"></div><div class="f"><label>Saldo ore da anni precedenti</label><input type="text" id="pzBancaRip"></div></div>
+  <label class="chk"><input type="checkbox" id="pzLav"> Ho lavorato il 4 novembre (8h extra)</label>
+  <div class="foot"><button class="btn main" onclick="salvaPZ()">Salva</button><button class="btn" onclick="rimuoviPZ()">Rimuovi</button><button class="btn" onclick="chiudiModal('modalPZ')">Annulla</button></div></div></div>
 
-<div class="modal" id="modalSync"><div class="sheet">
-  <h3>Backup e trasferimento dati</h3>
-  <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">I dati restano nel browser. Scarica un backup per spostarli tra PC e telefono.</p>
+<div class="modal" id="modalSync"><div class="sheet"><h3>Backup e ripristino</h3><p class="note" style="margin:0 0 12px">I dati restano nel browser: scarica un backup per spostarli tra PC e telefono.</p>
   <button class="btn main" style="width:100%" onclick="esportaDati()">Scarica backup</button>
-  <button class="btn" style="width:100%;margin-top:8px" onclick="forzaAggiornamento()">Forza aggiornamento app</button>
   <div class="f" style="margin-top:14px"><label>Ripristina da file</label><input type="file" id="fileImport" accept=".json"></div>
-  <div class="foot"><button class="btn" onclick="importaDati()">Ripristina</button><button class="btn" onclick="chiudiModal('modalSync')">Chiudi</button></div>
-</div></div>
+  <div class="foot"><button class="btn" onclick="importaDati()">Ripristina</button><button class="btn" onclick="chiudiModal('modalSync')">Chiudi</button></div></div></div>
 
+<div class="modal" id="modalReport"><div class="sheet" style="max-width:560px"><div id="reportBody"></div><div class="foot noprint"><button class="btn main" onclick="window.print()">Stampa / salva PDF</button><button class="btn" onclick="chiudiModal('modalReport')">Chiudi</button></div></div></div>
+
+<div id="toast" role="status"></div>
 <footer id="ver" style="text-align:center;font-size:.72rem;margin-top:18px"></footer>
-<script src="seed.js?v=3.0"></script>
-<script src="calculator.js?v=3.0"></script>
-<script src="app.js?v=3.0"></script>
+<script src="seed.js?v=4.0"></script><script src="calculator.js?v=4.0"></script><script src="app.js?v=4.0"></script>
 </body>
 </html>
