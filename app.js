@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.6', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.44', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {} });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -43,15 +43,110 @@ function load() {
   const raw = localStorage.getItem(KEY), old = k => JSON.parse(localStorage.getItem(k) || 'null');
   if (raw) S = Object.assign(VUOTO(), JSON.parse(raw));
   else {
-    S.t = old('orario_flex_timbrature') || (window.SEED_TIMBRATURE || []).map(t => ({ ...t, data: formatExcelDate(t.data) }));
-    S.g = old('orario_flex_giustificativi') || (window.SEED_GIUSTIFICATIVI || []).map(g => ({ ...g, data: formatExcelDate(g.data) }));
-    S.d = old('orario_flex_destinazioni') || {}; S.pz = old('orario_flex_puntozero');
+    S.t = old('orario_flex_timbrature') || [];
+    S.g = old('orario_flex_giustificativi') || [];
+    S.d = old('orario_flex_destinazioni') || {};
+    S.pz = old('orario_flex_puntozero');
   }
+
+  // AUTO-IMPORT/MERGE SEED DATI INAZ (MARZO - OTTOBRE 2026)
+  const seedT = window.SEED_TIMBRATURE || [];
+  const seedG = window.SEED_GIUSTIFICATIVI || [];
+  if (Array.isArray(seedT) && seedT.length > 0) {
+    if (!Array.isArray(S.t) || S.t.length === 0) {
+      S.t = seedT.map(t => ({ ...t, data: formatExcelDate(t.data) }));
+      S.g = (seedG || []).map(g => ({ ...g, data: formatExcelDate(g.data) }));
+    } else if (!S.t.some(t => t.data && t.data.startsWith('2026-03'))) {
+      const existingT = new Set(S.t.map(t => `${t.data}_${t.tipo}_${t.ora}`));
+      seedT.forEach(t => {
+        const formatted = { ...t, data: formatExcelDate(t.data) };
+        const k = `${formatted.data}_${formatted.tipo}_${formatted.ora}`;
+        if (!existingT.has(k)) {
+          S.t.push(formatted);
+          existingT.add(k);
+        }
+      });
+      const existingG = new Set((S.g || []).map(g => `${g.data}_${g.tipo}_${g.oraInizio || ''}_${g.oraFine || ''}`));
+      (seedG || []).forEach(g => {
+        const formatted = { ...g, data: formatExcelDate(g.data) };
+        const k = `${formatted.data}_${formatted.tipo}_${formatted.oraInizio || ''}_${formatted.oraFine || ''}`;
+        if (!existingG.has(k)) {
+          S.g.push(formatted);
+          existingG.add(k);
+        }
+      });
+    }
+    if (!S.pz || !S.pz.data) {
+      S.pz = { data: '2026-02-28', ore: 0, minuti: 0, segno: '+' };
+    }
+  }
+
   normalizzaGiustificativiStorici();
   applicaParametri();
   allineaImpegniReperibilita();
   save();
 }
+
+window.caricaDatiStoriciInaz = async function(sovrascrivi = false) {
+  let tList = window.SEED_TIMBRATURE;
+  let gList = window.SEED_GIUSTIFICATIVI;
+  if (!Array.isArray(tList) || tList.length === 0) {
+    try {
+      const res = await fetch('sync_data.json?v=' + Date.now());
+      if (res.ok) {
+        const data = await res.json();
+        tList = data.t;
+        gList = data.g;
+      }
+    } catch (e) {
+      console.warn('Fallback sync_data.json non riuscito:', e);
+    }
+  }
+  if (!Array.isArray(tList) || tList.length === 0) {
+    toast('Dati storici Inaz non reperibili.');
+    return false;
+  }
+  mut(() => {
+    if (sovrascrivi || !S.t || S.t.length === 0) {
+      S.t = tList.map(t => ({ ...t, data: formatExcelDate(t.data) }));
+      S.g = (gList || []).map(g => ({ ...g, data: formatExcelDate(g.data) }));
+    } else {
+      const existingT = new Set((S.t || []).map(t => `${t.data}_${t.tipo}_${t.ora}`));
+      tList.forEach(t => {
+        const formatted = { ...t, data: formatExcelDate(t.data) };
+        const k = `${formatted.data}_${formatted.tipo}_${formatted.ora}`;
+        if (!existingT.has(k)) {
+          S.t.push(formatted);
+          existingT.add(k);
+        }
+      });
+      const existingG = new Set((S.g || []).map(g => `${g.data}_${g.tipo}_${g.oraInizio || ''}_${g.oraFine || ''}`));
+      (gList || []).forEach(g => {
+        const formatted = { ...g, data: formatExcelDate(g.data) };
+        const k = `${formatted.data}_${formatted.tipo}_${formatted.oraInizio || ''}_${formatted.oraFine || ''}`;
+        if (!existingG.has(k)) {
+          S.g.push(formatted);
+          existingG.add(k);
+        }
+      });
+    }
+    if (!S.pz || !S.pz.data) {
+      S.pz = { data: '2026-02-28', ore: 0, minuti: 0, segno: '+' };
+    }
+    normalizzaGiustificativiStorici();
+    applicaParametri();
+    allineaImpegniReperibilita();
+  });
+  toast(`Dati Inaz caricati: ${S.t.length} timbrature e ${S.g.length} giustificativi ✓`);
+  const mAttivi = giorniConDati().map(d => d.slice(0, 7));
+  if (mAttivi.length && !mAttivi.includes(ymStr(rie.y, rie.m))) {
+    const ultimo = mAttivi.sort().reverse()[0];
+    rie.y = +ultimo.slice(0, 4);
+    rie.m = +ultimo.slice(5);
+  }
+  refresh();
+  return true;
+};
 const save = () => localStorage.setItem(KEY, JSON.stringify(S));
 function mut(fn) { undoStack.push(JSON.stringify(S)); if (undoStack.length > 30) undoStack.shift(); fn(); localStorage.setItem('cf_local_updated_ms', String(Date.now())); save(); refresh(); if (typeof triggerAutoSyncCloud === 'function') triggerAutoSyncCloud(); }
 window.__cfGetState = () => S;
@@ -397,7 +492,10 @@ function aggiornaSchermataOggi() {
   const bn = []; const rp = S.rep.find(r => repReminderDay(r.da) === iso); if (rp) bn.push(`${repCatLabel(repCat(rp))} dal ${rp.da.split('-').reverse().join('/')}: ricordati prima di staccare`);
   const chiusa = giornataChiusa(iso, tG), al = chiusa ? alertGiorno(iso) : [];
   const okBanner = (chiusa && (tG.length || gG.length) && !al.length) ? `<div class="alert" style="background:rgba(46,157,106,0.1);border-color:var(--green);color:var(--green)"><b>✓ Giornata chiusa e completa</b> — Timbrature, attività svolte e cose da fare sono in regola.</div>` : '';
-  $('alertContainer').innerHTML = (bn.length ? `<div class="alert">${bn.join('<br>')}</div>` : '') + (al.length ? `<div class="alert"><b>Da sistemare (Giornata chiusa)</b><div class="chips" style="margin-top:6px">${al.map(a => `<button class="chip" onclick="fix('${iso}','${a.f || 'd'}')">${a.t}</button>`).join('')}</div></div>` : okBanner);
+  const storicoHint = (!tG.length && !gG.length && isOggi && giorniConDati().length > 0)
+    ? `<div class="alert" style="background:rgba(59,130,246,0.08);border-color:#3b82f6;color:var(--navy);font-size:0.85rem">📅 <b>Dati storici Inaz disponibili:</b> trovate ${giorniConDati().length} giornate (marzo–ottobre 2026). <a href="#" onclick="pagina('storico');return false" style="font-weight:700;color:var(--brand);text-decoration:underline">Apri lo Storico</a> o <a href="#" onclick="pagina('riepilogo');return false" style="font-weight:700;color:var(--brand);text-decoration:underline">il Riepilogo</a>.</div>`
+    : '';
+  $('alertContainer').innerHTML = (bn.length ? `<div class="alert">${bn.join('<br>')}</div>` : '') + (al.length ? `<div class="alert"><b>Da sistemare (Giornata chiusa)</b><div class="chips" style="margin-top:6px">${al.map(a => `<button class="chip" onclick="fix('${iso}','${a.f || 'd'}')">${a.t}</button>`).join('')}</div></div>` : okBanner) + storicoHint;
   renderReg(tG, gG, iso); renderAgendaGiorno(iso); renderAttivita(iso); renderTodo(iso);
   const recapRows = [['Entrata normalizzata', c.entrataNorm]];
   if (c.ultimaUscita !== '--:--') {
@@ -1252,8 +1350,9 @@ function caricaStorico() {
 
     const details = document.createElement('details');
     details.className = 'card storico-mese';
-    // Aperto di default il mese corrente (il primo)
-    if (idx === 0) details.open = true;
+    // Aperto di default il primo mese con dati oppure il primo dell'elenco se ha dati
+    const primoConDati = mesiSorted.find(m => datePresenti.some(d => d.startsWith(m)));
+    if (ym === primoConDati || (idx === 0 && countDati > 0)) details.open = true;
 
     const summary = document.createElement('summary');
     summary.style.cssText = 'cursor:pointer;font-weight:700;display:flex;justify-content:space-between;align-items:center;padding:6px 0;user-select:none;color:var(--navy);font-size:1.05rem;';
@@ -1744,6 +1843,15 @@ window.addEventListener('beforeunload', () => {
 });
 window.onload = () => {
   load();
+  if (Array.isArray(window.SEED_TIMBRATURE) && window.SEED_TIMBRATURE.length > 0 && (!S.t || !S.t.some(t => t.data && t.data.startsWith('2026-03')))) {
+    window.caricaDatiStoriciInaz(false);
+  }
+  const mAttivi = giorniConDati().map(d => d.slice(0, 7));
+  if (mAttivi.length && !mAttivi.includes(ymStr(rie.y, rie.m))) {
+    const ultimo = mAttivi.sort().reverse()[0];
+    rie.y = +ultimo.slice(0, 4);
+    rie.m = +ultimo.slice(5);
+  }
   const validPag = ['oggi', 'storico', 'agenda', 'riepilogo', 'strumenti', 'opzioni', 'busta', 'rep', 'chiusure', 'parametri'];
   let targetPag = 'oggi';
   try {
