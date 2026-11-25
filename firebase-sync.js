@@ -40,7 +40,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 const CLIENT_WRITER_ID = 'w_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
-const CLOUD_VER = '4.4';
+const CLOUD_VER = '4.6';
 
 let currentUser = null;
 let unsubscribeSnapshot = null;
@@ -309,6 +309,21 @@ async function syncInviaDatiCloud(silenzioso = false) {
   }
 }
 
+// Unisce lo stato cloud "seme" (solo attività importate) ai dati locali senza mai sovrascrivere timbrature/giustificativi
+function mergeSeedRemote(remoteState) {
+  const sLoc = JSON.parse(JSON.stringify(getStateObj()));
+  sLoc.att = sLoc.att || {};
+  sLoc.exportedAttDays = sLoc.exportedAttDays || {};
+  Object.keys(remoteState.att || {}).forEach(iso => {
+    if (!Array.isArray(sLoc.att[iso]) || sLoc.att[iso].length === 0) {
+      sLoc.att[iso] = remoteState.att[iso];
+      sLoc.exportedAttDays[iso] = true;
+    }
+  });
+  delete sLoc._initialAttSeed;
+  return sLoc;
+}
+
 async function syncScaricaDatiCloud(chiediConferma = false) {
   if (!currentUser) {
     if (chiediConferma) apriModalSyncCloud();
@@ -334,6 +349,19 @@ async function syncScaricaDatiCloud(chiediConferma = false) {
     const remoteState = JSON.parse(data.stateJson);
     const remoteMs = Number(data.updatedAtMs) || 0;
     const localMs = getLocalUpdatedMs();
+
+    if (remoteState && remoteState._initialAttSeed === true) {
+      if (hasLocalUserData()) {
+        const merged = mergeSeedRemote(remoteState);
+        if (typeof window.__cfApplyCloudState === 'function') window.__cfApplyCloudState(merged, Date.now());
+        await syncInviaDatiCloud(true);
+        localStorage.setItem('cf_last_cloud_sync', nowTimeStr());
+        aggiornaUIStatoSync();
+        if (chiediConferma) showToast('Attività importate dal Cloud e unite ai tuoi dati locali! ✓');
+        return true;
+      }
+      delete remoteState._initialAttSeed;
+    }
 
     if (chiediConferma) {
       const sLoc = getStateObj();
@@ -389,6 +417,7 @@ function attivaListenerRealtime(user) {
     if (!snap.exists() || snap.metadata.hasPendingWrites) return;
     const data = snap.data();
     if (!data || !data.stateJson || data.writerId === CLIENT_WRITER_ID) return;
+    if (data.stateJson.indexOf('"_initialAttSeed":true') !== -1) return;
     const remoteMs = Number(data.updatedAtMs) || 0;
     const localMs = getLocalUpdatedMs();
     if (remoteMs > localMs) {
