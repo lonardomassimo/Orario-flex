@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-25T09:22:30.911Z",
+  "updatedAt": "2026-11-25T09:46:11.299Z",
   "S": {
     "t": [
       {
@@ -1856,24 +1856,6 @@
         }
       },
       {
-        "id": "mwuq73jfecc",
-        "googleId": "je2fp2mtd4rmf1js0v5r0bsjvo",
-        "googleCalId": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com",
-        "googleCalName": "Lavoro",
-        "googleCalColor": "#16a765",
-        "data": "2026-12-24",
-        "dataFine": "2026-12-30",
-        "ora": "08:00",
-        "oraFine": "08:00",
-        "titolo": "reperibilità NEVE",
-        "luogo": "",
-        "tipo": "Lavoro",
-        "fuori": false,
-        "reminder": 30,
-        "concluso": false,
-        "syncGoogle": true
-      },
-      {
         "id": "mwuq73jfm7j",
         "googleId": "6bafqn3g2v7nbuv3nracap2cp8",
         "googleCalId": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com",
@@ -2035,7 +2017,12 @@
         }
       ],
       "dismissedIds": [],
-      "pendingDeletes": [],
+      "pendingDeletes": [
+        {
+          "googleId": "je2fp2mtd4rmf1js0v5r0bsjvo",
+          "calId": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com"
+        }
+      ],
       "userConfigured": true
     },
     "favAtt": [
