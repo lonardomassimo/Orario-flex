@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cronoflex — Guida & Regole Orario</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --blue: #1f8fd0;
+      --green: #2e9d6a;
+      --amber: #f5a524;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b1523;
+        --card: #132238;
+        --ink: #f1f5f9;
+        --muted: #94a3b8;
+        --border: #1e3352;
+        --blue: #38bdf8;
+        --green: #34d399;
+        --amber: #fbbf24;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); padding: 16px; line-height: 1.5; font-size: 14px; max-width: 900px; margin: 0 auto; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    h1 { font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .badge { display: inline-block; padding: 2px 8px; font-size: 0.72rem; font-weight: 700; border-radius: 999px; background: rgba(31, 143, 208, 0.15); color: var(--blue); }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--ink); text-decoration: none; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+    .btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    .card h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .card p, .card li { font-size: 0.82rem; color: var(--ink); }
+    .card ul { padding-left: 18px; margin-top: 6px; }
+    .card li { margin-bottom: 4px; }
+    .sub { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: var(--muted); letter-spacing: 0.05em; }
+    .val { font-size: 1.3rem; font-weight: 800; color: var(--blue); margin: 4px 0 2px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.82rem; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; }
+    .sim-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 20px; }
+    .inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 12px 0; }
+    .inputs label { display: block; font-size: 0.7rem; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+    .inputs input, .inputs select { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--ink); font-size: 0.8rem; }
+    .res-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+    .res-item { background: var(--bg); padding: 8px; border-radius: 8px; text-align: center; }
+    .res-item small { display: block; font-size: 0.68rem; color: var(--muted); }
+    .res-item b { font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>⏱️ Cronoflex — Guida Dinamica Regole & Funzionamento <span class="badge">v4.6 Inaz</span></h1>
+      <p style="color:var(--muted);font-size:0.8rem">Regole dell'orario flessibile aziendale AGESP allineate al portale Inaz.</p>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <a href="index.html" class="btn primary">← Torna all'App</a>
+    </div>
+  </header>
+
+  <!-- Parametri Chiave -->
+  <div class="grid">
+    <div class="card">
+      <span class="sub">Fascia Ingresso</span>
+      <div class="val">08:00 – 09:00</div>
+      <p style="color:var(--muted)">Anticipo normalizzato a 08:00 salvo autorizzazioni.</p>
+    </div>
+    <div class="card">
+      <span class="sub">Pausa Pranzo</span>
+      <div class="val" style="color:var(--amber)">12:15 – 14:15</div>
+      <p style="color:var(--muted)">Minimo 30 min. Uscita e rientro entro la finestra.</p>
+    </div>
+    <div class="card">
+      <span class="sub">Uscita Minima (Lun-Gio)</span>
+      <div class="val" style="color:#6366f1">17:15</div>
+      <p style="color:var(--muted)">Prima delle 17:15 serve giustificativo o recupero.</p>
+    </div>
+    <div class="card">
+      <span class="sub">Teorico Giornata</span>
+      <div class="val" style="color:var(--green)">8h (Ven 6h)</div>
+      <p style="color:var(--muted)">Venerdì continuato senza pausa obbligatoria.</p>
+    </div>
+  </div>
+
+  <!-- Schede Regole Inaz -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:14px;">
+    <div class="card">
+      <h3>📅 Regola del Venerdì Continuato</h3>
+      <ul>
+        <li><strong>Nessuna detrazione di 30 min</strong> d'ufficio se non si timbra la pausa.</li>
+        <li><strong>Fascia 6h01m – 6h29m:</strong> conteggio arrotondato per difetto a 6h00m (straordinario 0).</li>
+        <li><strong>Da 6h30m in poi:</strong> straordinario riconosciuto direttamente a scatti di 15 min (6h30 $\rightarrow$ +0:30, 6h50 $\rightarrow$ +0:45).</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🍽️ Rientro Pausa oltre le 14:15</h3>
+      <ul>
+        <li>Il rientro tardivo estende la durata effettiva della pausa e trasla il completamento.</li>
+        <li><strong>Nessun doppio addebito:</strong> il ritardo non viene detratto una seconda volta dallo straordinario.</li>
+        <li><strong>Azzeramento scoperto:</strong> se il lavoro prolungato serale copre le 8 ore, l'avviso di scoperto sparisce.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>⏰ Ritardo Ingresso (> 09:00) & Ferie</h3>
+      <ul>
+        <li>Il ritardo d'ingresso mattutino non giustificato riduce il target ordinario (8h - ritardo).</li>
+        <li>Le ore serali oltre il target ridotto maturano straordinario.</li>
+        <li><strong>Compensazione ferie:</strong> se la sera si prolunga l'orario, le ferie parziali mattutine vengono ridotte a scatti di 15m.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>💻 Mezza Giornata Smart Working</h3>
+      <ul>
+        <li>Tra sede e Smart Working pomeridiano c'è una pausa obbligatoria di 30 min.</li>
+        <li>Le ore in sede si calcolano dall'uscita normalizzata a quarti d'ora.</li>
+        <li>La quota SW si adatta esattamente alla copertura delle ore teoriche dovute.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Tabella Causali -->
+  <div class="card" style="margin-top:16px;">
+    <h3>🏷️ Causali e Giustificativi Principali</h3>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Causale</th>
+            <th>Sigla Inaz</th>
+            <th>Monte / Limite</th>
+            <th>Note Applicative</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Ferie</strong></td>
+            <td><code>FER</code></td>
+            <td>168:00 ore/anno (+ riporto)</td>
+            <td>Primo scatto min 30m, poi 15m. Riporto valido fino al 30 giugno.</td>
+          </tr>
+          <tr>
+            <td><strong>Ex-Festività</strong></td>
+            <td><code>EXF</code></td>
+            <td>30:00 ore/anno</td>
+            <td>Fruibili a ore (scatti 15 min). Si azzerano al 31/12.</td>
+          </tr>
+          <tr>
+            <td><strong>Recupero Straordinari</strong></td>
+            <td><code>RST / STM</code></td>
+            <td>Banca ore (max 40h/anno)</td>
+            <td>Accantonabile se ferie residue anno prima &le; 50h. Non scade.</td>
+          </tr>
+          <tr>
+            <td><strong>Donazione Sangue</strong></td>
+            <td><code>DON</code></td>
+            <td>Illimitato</td>
+            <td>Copre l'intera giornata lavorativa con retribuzione spettante.</td>
+          </tr>
+          <tr>
+            <td><strong>Permesso Non Retribuito</strong></td>
+            <td><code>PNR</code></td>
+            <td>Al bisogno</td>
+            <td>Copre lo scoperto senza generare retribuzione oraria ordinaria.</td>
+          </tr>
+          <tr>
+            <td><strong>Visita Medica</strong></td>
+            <td><code>VME</code></td>
+            <td>30:00 ore/anno</td>
+            <td>Orario visita + 30 min prima + 30 min dopo. Pausa pranzo da fine visita.</td>
+          </tr>
+          <tr>
+            <td><strong>Smart Working</strong></td>
+            <td><code>SWK</code></td>
+            <td>Da accordo</td>
+            <td>Intera giornata o mezza giornata combinata con la sede.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Simulatore Interattivo -->
+  <div class="sim-box">
+    <h3>🧪 Simulatore di Calcolo Rapido</h3>
+    <div class="inputs">
+      <div>
+        <label>Giorno</label>
+        <select id="sDay" onchange="calc()">
+          <option value="lun">Lun-Gio (8h)</option>
+          <option value="ven">Venerdì (6h)</option>
+        </select>
+      </div>
+      <div>
+        <label>Entrata</label>
+        <input type="time" id="sE" value="08:45" onchange="calc()">
+      </div>
+      <div>
+        <label>U Pausa</label>
+        <input type="time" id="sUP" value="13:00" onchange="calc()">
+      </div>
+      <div>
+        <label>E Pausa</label>
+        <input type="time" id="sEP" value="13:30" onchange="calc()">
+      </div>
+      <div>
+        <label>Uscita</label>
+        <input type="time" id="sU" value="17:45" onchange="calc()">
+      </div>
+    </div>
+    <div style="font-size:0.8rem;margin-bottom:8px;">
+      <label><input type="checkbox" id="sNoPausa" onchange="calc()"> Orario continuato (senza timbrature pausa)</label>
+    </div>
+    <div class="res-grid">
+      <div class="res-item"><small>Ore Lavorate</small><b id="rLav">--:--</b></div>
+      <div class="res-item"><small>Ordinarie Coperte</small><b id="rOrd" style="color:var(--green)">--:--</b></div>
+      <div class="res-item"><small>Straordinario</small><b id="rStr" style="color:var(--amber)">--:--</b></div>
+      <div class="res-item"><small>Pausa Applicata</small><b id="rPausa" style="color:var(--blue)">--:--</b></div>
+    </div>
+    <div id="rNote" style="font-size:0.75rem;color:var(--muted);margin-top:10px;padding:6px;background:var(--bg);border-radius:6px;"></div>
+  </div>
+
+  <footer style="margin-top:24px;padding-top:12px;border-top:1px solid var(--border);font-size:0.75rem;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <span>Arch. Lonardo Massimo — AGESP S.p.A.</span>
+    <span>Sincronizzato al 100% con repository pubblico Cronoflex</span>
+  </footer>
+
+  <script>
+    function pM(s) { if (!s) return null; const p = s.split(':'); return parseInt(p[0], 10)*60 + parseInt(p[1], 10); }
+    function fM(m) { if (m === null || isNaN(m)) return '--:--'; return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0'); }
+
+    function calc() {
+      const isVen = document.getElementById('sDay').value === 'ven';
+      const oreDov = isVen ? 360 : 480;
+      const noP = document.getElementById('sNoPausa').checked;
+      const eRaw = pM(document.getElementById('sE').value);
+      const uRaw = pM(document.getElementById('sU').value);
+      const upRaw = noP ? null : pM(document.getElementById('sUP').value);
+      const epRaw = noP ? null : pM(document.getElementById('sEP').value);
+
+      document.getElementById('sUP').disabled = noP;
+      document.getElementById('sEP').disabled = noP;
+
+      let eNorm = eRaw;
+      if (eRaw < 480) eNorm = 480;
+      let rit = 0;
+      if (eRaw > 540) {
+        rit = Math.ceil((eRaw - 540) / 15) * 15;
+        eNorm = 540 + rit;
+      }
+
+      let pausa = 0;
+      if (isVen && noP) {
+        pausa = 0;
+      } else if (!noP && upRaw !== null && epRaw !== null) {
+        let epNorm = epRaw;
+        if (epRaw > 855) epNorm = 855 + Math.ceil((epRaw - 855) / 15) * 15;
+        pausa = Math.max(30, epNorm - upRaw);
+      } else if (!isVen && noP) {
+        pausa = 30;
+      }
+
+      let lav = Math.max(0, uRaw - eNorm - pausa);
+      let target = Math.max(0, oreDov - rit);
+      let ord = Math.min(target, lav);
+      let str = 0;
+
+      if (isVen && noP) {
+        const ecc = lav - oreDov;
+        if (ecc > 0 && ecc < 30) {
+          lav = oreDov;
+          ord = oreDov;
+          str = 0;
+        } else if (ecc >= 30) {
+          str = Math.floor(ecc / 15) * 15;
+          ord = oreDov;
+        }
+      } else {
+        const ecc = Math.max(0, lav - target);
+        if (ecc >= 30) {
+          str = Math.floor(ecc / 15) * 15;
+        }
+      }
+
+      document.getElementById('rLav').textContent = fM(lav);
+      document.getElementById('rOrd').textContent = fM(ord);
+      document.getElementById('rStr').textContent = str > 0 ? '+' + fM(str) : '00:00';
+      document.getElementById('rPausa').textContent = pausa + ' min';
+
+      let note = 'Calcolo conforme alle regole Inaz.';
+      if (rit > 0) note = `Ritardo ingresso di ${rit}m: target ordinario ridotto a ${fM(target)}.`;
+      if (isVen && noP && (uRaw - eNorm) > 360 && (uRaw - eNorm) < 390) note = 'Venerdì tra 6h01 e 6h29: arrotondato per difetto a 6h00 senza pausa detratta.';
+      document.getElementById('rNote').textContent = note;
+    }
+
+    calc();
+  </script>
+</body>
+</html>
