@@ -1,5 +1,5 @@
-const CACHE_NAME = 'cronoflex-v42';
-const ASSETS = ['./', './index.html', './app.js', './calculator.js', './seed.js', './firebase-sync.js', './guida_regole.html', './modello_dirigenza.xlsx', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'cronoflex-v43';
+const ASSETS = ['./', './index.html', './app.js', './calculator.js', './seed.js', './sync_data.json', './firebase-sync.js', './guida_regole.html', './modello_dirigenza.xlsx', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => Promise.all(ASSETS.map(a => c.add(new Request(a, { cache: 'reload' })).catch(() => {})))));
   self.skipWaiting();
