@@ -1,0 +1,2044 @@
+{
+  "updatedAt": "2026-11-25T08:40:28.872Z",
+  "S": {
+    "t": [
+      {
+        "data": "2026-03-02",
+        "ora": "8:23",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-02",
+        "ora": "17:55",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-03",
+        "ora": "8:47",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-03",
+        "ora": "13:27",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-03",
+        "ora": "13:42",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-03",
+        "ora": "17:18",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-04",
+        "ora": "8:45",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-04",
+        "ora": "17:18",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-05",
+        "ora": "8:45",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-05",
+        "ora": "11:31",
+        "tipo": "U VISITA MEDICA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-05",
+        "ora": "13:00",
+        "tipo": "U PAUSA",
+        "fittizia": true,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-05",
+        "ora": "13:00",
+        "tipo": "E VISITA MEDICA",
+        "fittizia": true,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-05",
+        "ora": "14:00",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-05",
+        "ora": "18:10",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-06",
+        "ora": "8:43",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-06",
+        "ora": "15:11",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-09",
+        "ora": "8:44",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-09",
+        "ora": "13:02",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-09",
+        "ora": "14:14",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-09",
+        "ora": "18:17",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-10",
+        "ora": "8:43",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-10",
+        "ora": "12:16",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-10",
+        "ora": "13:52",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-10",
+        "ora": "18:32",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-11",
+        "ora": "8:44",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-11",
+        "ora": "12:48",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-11",
+        "ora": "13:04",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-11",
+        "ora": "17:26",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-12",
+        "ora": "8:48",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-12",
+        "ora": "12:18",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-12",
+        "ora": "13:58",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-12",
+        "ora": "18:34",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-13",
+        "ora": "8:45",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-13",
+        "ora": "14:54",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-16",
+        "ora": "8:43",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-16",
+        "ora": "12:15",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-16",
+        "ora": "12:47",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-16",
+        "ora": "17:17",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-17",
+        "ora": "8:55",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-17",
+        "ora": "12:47",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-17",
+        "ora": "13:11",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-17",
+        "ora": "14:19",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-18",
+        "ora": "8:40",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-18",
+        "ora": "12:47",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-18",
+        "ora": "13:17",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-18",
+        "ora": "17:28",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-19",
+        "ora": "8:53",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-19",
+        "ora": "12:36",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-19",
+        "ora": "13:01",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-19",
+        "ora": "17:28",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-20",
+        "ora": "8:42",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-20",
+        "ora": "14:47",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-23",
+        "ora": "8:43",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-23",
+        "ora": "12:36",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-23",
+        "ora": "12:53",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-23",
+        "ora": "17:17",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-24",
+        "ora": "8:50",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-24",
+        "ora": "12:17",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-24",
+        "ora": "13:23",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-24",
+        "ora": "18:33",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-25",
+        "ora": "8:41",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-25",
+        "ora": "14:02",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-25",
+        "ora": "14:12",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-25",
+        "ora": "17:47",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-26",
+        "ora": "8:43",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-26",
+        "ora": "12:45",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-26",
+        "ora": "13:14",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-26",
+        "ora": "17:18",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-27",
+        "ora": "8:46",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-27",
+        "ora": "14:51",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-30",
+        "ora": "8:38",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-30",
+        "ora": "13:24",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-30",
+        "ora": "14:02",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-30",
+        "ora": "17:21",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-31",
+        "ora": "8:40",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-31",
+        "ora": "13:24",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-31",
+        "ora": "13:53",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-03-31",
+        "ora": "18:02",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-01",
+        "ora": "8:41",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-01",
+        "ora": "12:56",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-01",
+        "ora": "14:14",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-01",
+        "ora": "18:00",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-02",
+        "ora": "9:26",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-02",
+        "ora": "13:12",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-02",
+        "ora": "14:07",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-02",
+        "ora": "18:37",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-03",
+        "ora": "7:59",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-03",
+        "ora": "14:02",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-07",
+        "ora": "8:01",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-07",
+        "ora": "12:52",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-07",
+        "ora": "14:16",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-07",
+        "ora": "18:25",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-08",
+        "ora": "8:41",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-08",
+        "ora": "12:34",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-08",
+        "ora": "13:00",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-08",
+        "ora": "17:51",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-09",
+        "ora": "8:46",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-09",
+        "ora": "13:30",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-09",
+        "ora": "14:00",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-09",
+        "ora": "17:20",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-16",
+        "ora": "8:24",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-16",
+        "ora": "13:04",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-16",
+        "ora": "14:15",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-20",
+        "ora": "8:44",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-20",
+        "ora": "12:15",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-20",
+        "ora": "13:48",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-20",
+        "ora": "18:20",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-21",
+        "ora": "12:53",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-21",
+        "ora": "17:38",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-22",
+        "ora": "8:42",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-22",
+        "ora": "12:38",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-22",
+        "ora": "14:15",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-22",
+        "ora": "18:25",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-23",
+        "ora": "9:55",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-23",
+        "ora": "18:30",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-27",
+        "ora": "8:30",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-30",
+        "ora": "8:45",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-30",
+        "ora": "12:39",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-04-30",
+        "ora": "13:24",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-06",
+        "ora": "8:10",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-06",
+        "ora": "13:07",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-06",
+        "ora": "14:01",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-06",
+        "ora": "17:36",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-07",
+        "ora": "8:44",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-07",
+        "ora": "12:27",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-07",
+        "ora": "12:53",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-07",
+        "ora": "17:15",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-11",
+        "ora": "8:42",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-11",
+        "ora": "13:33",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-11",
+        "ora": "14:17",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-11",
+        "ora": "18:14",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-14",
+        "ora": "8:42",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-14",
+        "ora": "12:58",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-14",
+        "ora": "14:00",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-14",
+        "ora": "18:29",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-19",
+        "ora": "8:42",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-19",
+        "ora": "13:01",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-19",
+        "ora": "13:25",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-19",
+        "ora": "19:06",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-26",
+        "ora": "8:52",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-26",
+        "ora": "12:15",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-26",
+        "ora": "13:46",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-26",
+        "ora": "18:23",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-27",
+        "ora": "8:42",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-27",
+        "ora": "13:04",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-05-27",
+        "ora": "13:47",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-06-16",
+        "ora": "8:56",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-06-16",
+        "ora": "13:53",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-06-16",
+        "ora": "14:43",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-07-27",
+        "ora": "8:24",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-07-27",
+        "ora": "14:04",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-07-27",
+        "ora": "14:05",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-07-27",
+        "ora": "17:56",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-08",
+        "ora": "8:24",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-08",
+        "ora": "13:53",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-08",
+        "ora": "14:16",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-08",
+        "ora": "18:20",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-14",
+        "ora": "10:29",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-14",
+        "ora": "12:53",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-14",
+        "ora": "13:48",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-14",
+        "ora": "18:26",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-15",
+        "ora": "8:26",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-15",
+        "ora": "12:17",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-15",
+        "ora": "13:37",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-15",
+        "ora": "17:50",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-23",
+        "ora": "8:22",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-23",
+        "ora": "12:15",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-23",
+        "ora": "14:15",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-23",
+        "ora": "18:28",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-28",
+        "ora": "8:29",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-28",
+        "ora": "13:15",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-28",
+        "ora": "14:04",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-30",
+        "ora": "8:21",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-30",
+        "ora": "13:37",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-30",
+        "ora": "14:07",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-09-30",
+        "ora": "17:40",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-10-27",
+        "ora": "8:21",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-10-27",
+        "ora": "12:29",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-10-27",
+        "ora": "14:15",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-02",
+        "ora": "8:50",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-02",
+        "ora": "13:57",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-02",
+        "ora": "14:13",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-02",
+        "ora": "17:53",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-03",
+        "ora": "8:28",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-03",
+        "ora": "13:32",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-03",
+        "ora": "13:55",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-03",
+        "ora": "17:52",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-04",
+        "ora": "10:29",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-04",
+        "ora": "12:55",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-04",
+        "ora": "13:26",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-04",
+        "ora": "17:51",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-05",
+        "ora": "8:21",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-05",
+        "ora": "13:09",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-05",
+        "ora": "13:26",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-05",
+        "ora": "17:25",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-06",
+        "ora": "8:27",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-06",
+        "ora": "14:35",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-09",
+        "ora": "8:26",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-09",
+        "ora": "17:51",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-10",
+        "ora": "8:28",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-10",
+        "ora": "13:53",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-10",
+        "ora": "14:14",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-10",
+        "ora": "17:38",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-16",
+        "ora": "8:23",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-16",
+        "ora": "13:17",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-16",
+        "ora": "14:07",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-16",
+        "ora": "17:48",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-17",
+        "ora": "8:23",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-17",
+        "ora": "13:10",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-19",
+        "ora": "8:29",
+        "tipo": "E",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-19",
+        "ora": "13:27",
+        "tipo": "U PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-19",
+        "ora": "13:49",
+        "tipo": "E PAUSA",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-19",
+        "ora": "18:10",
+        "tipo": "U",
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-23",
+        "ora": "8:23",
+        "tipo": "E",
+        "mancata": false,
+        "fittizia": false,
+        "autorizzata": false,
+        "rep": false
+      },
+      {
+        "data": "2026-11-23",
+        "autorizzata": false,
+        "ora": "14:03",
+        "tipo": "E PAUSA",
+        "mancata": false,
+        "rep": false,
+        "fittizia": false
+      },
+      {
+        "data": "2026-11-23",
+        "autorizzata": false,
+        "ora": "14:03",
+        "tipo": "U PAUSA",
+        "mancata": false,
+        "rep": false,
+        "fittizia": false
+      },
+      {
+        "data": "2026-11-23",
+        "ora": "18:23",
+        "tipo": "U",
+        "mancata": false,
+        "fittizia": false,
+        "autorizzata": false,
+        "rep": false
+      },
+      {
+        "data": "2026-11-24",
+        "autorizzata": false,
+        "ora": "8:28",
+        "tipo": "E",
+        "mancata": false,
+        "rep": false,
+        "fittizia": false
+      },
+      {
+        "data": "2026-11-24",
+        "ora": "13:12",
+        "tipo": "U PAUSA",
+        "mancata": false,
+        "fittizia": false,
+        "autorizzata": false,
+        "rep": false
+      },
+      {
+        "data": "2026-11-24",
+        "ora": "14:13",
+        "tipo": "E PAUSA",
+        "mancata": false,
+        "fittizia": false,
+        "autorizzata": false,
+        "rep": false
+      },
+      {
+        "data": "2026-11-24",
+        "ora": "17:42",
+        "tipo": "U",
+        "mancata": false,
+        "fittizia": false,
+        "autorizzata": false
+      },
+      {
+        "data": "2026-11-25",
+        "ora": "8:30",
+        "tipo": "E",
+        "mancata": false,
+        "fittizia": false,
+        "autorizzata": false,
+        "rep": false
+      }
+    ],
+    "g": [
+      {
+        "data": "2026-03-02",
+        "tipo": "STRAORDINARIO PAUSA",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00"
+      },
+      {
+        "data": "2026-03-05",
+        "tipo": "VISITA MEDICA",
+        "oraInizio": "12:00",
+        "oraFine": "12:30",
+        "durata": "0:30",
+        "tragittoPrima": "0:30",
+        "tragittoDopo": "0:30"
+      },
+      {
+        "data": "2026-03-17",
+        "tipo": "ORE RECUPERO STRAORDINARI",
+        "oraInizio": "14:19",
+        "oraFine": "14:25",
+        "durata": "0:06",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00"
+      },
+      {
+        "data": "2026-03-17",
+        "tipo": "FERIE",
+        "oraInizio": "14:25",
+        "oraFine": "17:25",
+        "durata": "3:00",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00"
+      },
+      {
+        "data": "2026-04-10",
+        "tipo": "FERIE",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "6:00",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00",
+        "tuttaGiornata": true
+      },
+      {
+        "data": "2026-04-13",
+        "tipo": "FERIE",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "8:00",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00",
+        "tuttaGiornata": true
+      },
+      {
+        "data": "2026-04-14",
+        "tipo": "FERIE",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "8:00",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00",
+        "tuttaGiornata": true
+      },
+      {
+        "data": "2026-04-15",
+        "tipo": "FERIE",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "8:00",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00",
+        "tuttaGiornata": true
+      },
+      {
+        "data": "2026-04-21",
+        "tipo": "ORE RECUPERO STRAORDINARI",
+        "oraInizio": "09:00",
+        "oraFine": "12:15",
+        "durata": "3:15",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00"
+      },
+      {
+        "data": "2026-09-14",
+        "tipo": "FERIE",
+        "oraInizio": "09:00",
+        "oraFine": "10:30",
+        "durata": "1:30",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00"
+      },
+      {
+        "data": "2026-11-04",
+        "tipo": "FERIE",
+        "oraInizio": "09:00",
+        "oraFine": "10:30",
+        "durata": "1:30",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00"
+      },
+      {
+        "data": "2026-11-09",
+        "tipo": "STRAORDINARIO PAUSA",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "0:30",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00"
+      },
+      {
+        "data": "2026-11-11",
+        "tipo": "FERIE",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "8:00",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00",
+        "tuttaGiornata": true
+      },
+      {
+        "data": "2026-11-12",
+        "tipo": "SMART WORKING",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "8:00",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00",
+        "tuttaGiornata": true
+      },
+      {
+        "data": "2026-11-13",
+        "tipo": "CONGEDO PARENTALE",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "6:00",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00",
+        "tuttaGiornata": true
+      },
+      {
+        "data": "2026-11-17",
+        "tipo": "SMART WORKING",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "3:15",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00"
+      },
+      {
+        "data": "2026-11-18",
+        "tipo": "FERIE",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "8:00",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00",
+        "tuttaGiornata": true
+      },
+      {
+        "data": "2026-11-20",
+        "tipo": "SCIOPERO",
+        "oraInizio": "",
+        "oraFine": "",
+        "durata": "6:00",
+        "tragittoPrima": "0:00",
+        "tragittoDopo": "0:00",
+        "tuttaGiornata": true
+      }
+    ],
+    "d": {
+      "2026-11-23": "BANCA",
+      "2026-11-02": "BANCA",
+      "2026-11-03": "BANCA",
+      "2026-11-05": "BANCA",
+      "2026-11-09": "BANCA",
+      "2026-11-10": "BANCA",
+      "2026-11-16": "BANCA",
+      "2026-11-19": "BANCA"
+    },
+    "pz": null,
+    "ver": {},
+    "rep": [],
+    "att": {
+      "2026-11-23": [
+        {
+          "cat": "GESTIONE ORDINARIA|||ORDINARIA AGESP AMBIENTE|||57-IGIENE AMBIENTALE",
+          "ore": 4,
+          "note": ""
+        },
+        {
+          "cat": "GESTIONE ORDINARIA|||ORDINARIA AGESP AMBIENTE|||58- IGIENE URBANA",
+          "ore": 4,
+          "note": ""
+        },
+        {
+          "cat": "GESTIONE STRAORDINARIA|||AGESP AMBIENTE PER IL TER.|||57-IGIENE AMBIENTALE",
+          "ore": 1.5,
+          "note": ""
+        }
+      ],
+      "2026-11-24": [
+        {
+          "cat": "GESTIONE STRAORDINARIA||||||AGESP S.p.A.                                                                Manutenzione straordinaria/nuove opere",
+          "ore": 4,
+          "note": "Planimetrie e rilievi SNAM Piazzale Crespi"
+        },
+        {
+          "cat": "GESTIONE ORDINARIA|||ORD.(strutture di proprietà/affitto)|||FABBRICATI",
+          "ore": 2,
+          "note": ""
+        },
+        {
+          "cat": "GESTIONE ORDINARIA|||ORDINARIA AGESP AMBIENTE|||57-IGIENE AMBIENTALE",
+          "ore": 2,
+          "note": ""
+        }
+      ],
+      "2026-11-03": [
+        {
+          "cat": "GESTIONE ORDINARIA|||ORDINARIA COMUNE DI BUSTO ARSIZIO|||FABBRICATI",
+          "ore": 3,
+          "note": ""
+        },
+        {
+          "cat": "GESTIONE STRAORDINARIA||||||Comune Busto Arsizio                                                                Manutenzione straordinaria/nuove opere",
+          "ore": 5.75,
+          "note": ""
+        }
+      ]
+    },
+    "ev": [
+      {
+        "id": "mwtk4nhmt1c",
+        "googleId": "gssjfujnoqlg929qq8tru48om4",
+        "data": "2026-11-24",
+        "ora": "10:45",
+        "titolo": "sopralluogo con SNAM",
+        "luogo": "",
+        "tipo": "Lavoro",
+        "fuori": false,
+        "reminder": 30,
+        "concluso": true,
+        "dataFine": "2026-11-24",
+        "oraFine": "11:15",
+        "googleCalId": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com",
+        "googleCalName": "Lavoro",
+        "googleCalColor": "#16a765"
+      },
+      {
+        "id": "mwuq73jf09b",
+        "googleId": "s4elecla64hmo9jtqisa3pt0b8",
+        "googleCalId": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com",
+        "googleCalName": "Lavoro",
+        "googleCalColor": "#16a765",
+        "data": "2026-11-24",
+        "dataFine": "2026-11-30",
+        "ora": "08:00",
+        "oraFine": "08:00",
+        "titolo": "rincalzo NEVE",
+        "luogo": "",
+        "tipo": "Lavoro",
+        "fuori": false,
+        "reminder": 30,
+        "concluso": false,
+        "syncGoogle": true,
+        "conclusiGiorni": {
+          "2026-11-24": true,
+          "2026-11-25": true
+        }
+      },
+      {
+        "id": "mwuq73jfecc",
+        "googleId": "je2fp2mtd4rmf1js0v5r0bsjvo",
+        "googleCalId": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com",
+        "googleCalName": "Lavoro",
+        "googleCalColor": "#16a765",
+        "data": "2026-12-24",
+        "dataFine": "2026-12-30",
+        "ora": "08:00",
+        "oraFine": "08:00",
+        "titolo": "reperibilità NEVE",
+        "luogo": "",
+        "tipo": "Lavoro",
+        "fuori": false,
+        "reminder": 30,
+        "concluso": false,
+        "syncGoogle": true
+      },
+      {
+        "id": "mwuq73jfm7j",
+        "googleId": "6bafqn3g2v7nbuv3nracap2cp8",
+        "googleCalId": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com",
+        "googleCalName": "Lavoro",
+        "googleCalColor": "#16a765",
+        "data": "2027-01-17",
+        "dataFine": "2027-01-23",
+        "ora": "08:00",
+        "oraFine": "08:00",
+        "titolo": "rincalzo NEVE",
+        "luogo": "",
+        "tipo": "Lavoro",
+        "fuori": false,
+        "reminder": 30,
+        "concluso": false,
+        "syncGoogle": true
+      },
+      {
+        "id": "mwuq73jfzd7",
+        "googleId": "vshq2jf7fj0pve1u27cbeitrd4",
+        "googleCalId": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com",
+        "googleCalName": "Lavoro",
+        "googleCalColor": "#16a765",
+        "data": "2027-02-10",
+        "dataFine": "2027-02-16",
+        "ora": "08:00",
+        "oraFine": "08:00",
+        "titolo": "reperibilità NEVE",
+        "luogo": "",
+        "tipo": "Lavoro",
+        "fuori": false,
+        "reminder": 30,
+        "concluso": false,
+        "syncGoogle": true
+      },
+      {
+        "id": "mwuq73jf42y",
+        "googleId": "kmdb806h8q2sl6hdjniei4gogc",
+        "googleCalId": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com",
+        "googleCalName": "Lavoro",
+        "googleCalColor": "#16a765",
+        "data": "2027-03-12",
+        "dataFine": "2027-03-18",
+        "ora": "08:00",
+        "oraFine": "08:00",
+        "titolo": "rincalzo NEVE",
+        "luogo": "",
+        "tipo": "Lavoro",
+        "fuori": false,
+        "reminder": 30,
+        "concluso": false,
+        "syncGoogle": true
+      },
+      {
+        "id": "mwuq73jfi0h",
+        "googleId": "llqk9vcpj1dfdpledae5hh979c",
+        "googleCalId": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com",
+        "googleCalName": "Lavoro",
+        "googleCalColor": "#16a765",
+        "data": "2027-04-05",
+        "dataFine": "2027-04-11",
+        "ora": "08:00",
+        "oraFine": "08:00",
+        "titolo": "reperibilità NEVE",
+        "luogo": "",
+        "tipo": "Lavoro",
+        "fuori": false,
+        "reminder": 30,
+        "concluso": false,
+        "syncGoogle": true
+      }
+    ],
+    "todo": [
+      {
+        "id": "mwtjr1ti0zx",
+        "data": "2026-11-23",
+        "testo": "prova",
+        "fatto": true
+      }
+    ],
+    "busta": {},
+    "chiusure": [],
+    "prm": null,
+    "gcal": {
+      "connected": true,
+      "email": "lonardo.massimo@gmail.com",
+      "selectedCals": [
+        "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com"
+      ],
+      "calCache": [
+        {
+          "id": "91njfh17n1cnn1h5cege8r7eegqlriki@import.calendar.google.com",
+          "summary": "Tasks personali outlook",
+          "primary": false,
+          "backgroundColor": "#f83a22",
+          "accessRole": "reader"
+        },
+        {
+          "id": "it.italian#holiday@group.v.calendar.google.com",
+          "summary": "Festività in Italia",
+          "primary": false,
+          "backgroundColor": "#16a765",
+          "accessRole": "reader"
+        },
+        {
+          "id": "tuvslu36bqcqvi92meps7qrbes@group.calendar.google.com",
+          "summary": "Coordinamento CEBA",
+          "primary": false,
+          "backgroundColor": "#cabdbf",
+          "accessRole": "owner"
+        },
+        {
+          "id": "c002b3be518fab691a9861d16d6bea7e5c33c9dab05f4d6e9a5f7760740266a6@group.calendar.google.com",
+          "summary": "impegni CEBA",
+          "primary": false,
+          "backgroundColor": "#ffad46",
+          "accessRole": "owner"
+        },
+        {
+          "id": "family10949690917579814078@group.calendar.google.com",
+          "summary": "Famiglia",
+          "primary": false,
+          "backgroundColor": "#9a9cff",
+          "accessRole": "owner"
+        },
+        {
+          "id": "0gdorirp1ohlo39t8b1u4f32qo@group.calendar.google.com",
+          "summary": "PAGAMENTI",
+          "primary": false,
+          "backgroundColor": "#fad165",
+          "accessRole": "owner"
+        },
+        {
+          "id": "rosy.salinitro@gmail.com",
+          "summary": "Personale Rosy",
+          "primary": false,
+          "backgroundColor": "#ac725e",
+          "accessRole": "owner"
+        },
+        {
+          "id": "lonardo.massimo@gmail.com",
+          "summary": "Personale Max",
+          "primary": true,
+          "backgroundColor": "#f83a22",
+          "accessRole": "owner"
+        },
+        {
+          "id": "4eba7d93906fef28e13b7267b2fa9442aa56f02cbb00d5fd5f4fe06b12242132@group.calendar.google.com",
+          "summary": "Lavoro",
+          "primary": false,
+          "backgroundColor": "#16a765",
+          "accessRole": "owner"
+        }
+      ],
+      "dismissedIds": [],
+      "pendingDeletes": [],
+      "userConfigured": true
+    },
+    "favAtt": [
+      "GESTIONE ORDINARIA|||ORDINARIA AGESP AMBIENTE|||ORDINARIA AGESP AMBIENTE - Voce generale",
+      "GESTIONE STRAORDINARIA|||AGESP AMBIENTE PER IL TER.|||AGESP AMBIENTE PER IL TER. - Voce generale",
+      "GESTIONE ORDINARIA|||ORD.(strutture di proprietà/affitto)|||FABBRICATI",
+      "GESTIONE ORDINARIA|||ORDINARIA AGESP AMBIENTE|||57-IGIENE AMBIENTALE",
+      "GESTIONE ORDINARIA|||ORDINARIA AGESP AMBIENTE|||58- IGIENE URBANA",
+      "GESTIONE ORDINARIA|||ORDINARIA AGESP AMBIENTE|||59- CMR BUSTO ARSIZIO",
+      "GESTIONE STRAORDINARIA||||||AGESP S.p.A.                                                                Manutenzione straordinaria/nuove opere",
+      "GESTIONE STRAORDINARIA|||AGESP AMBIENTE PER IL TER.|||57-IGIENE AMBIENTALE"
+    ],
+    "customCatDir": null,
+    "exportedAttDays": {
+      "2026-11-24": true,
+      "2026-11-03": true
+    }
+  }
+}
