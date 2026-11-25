@@ -13,7 +13,9 @@ let PARAMETRI = {
   oreTeoricheVenerdi: 6 * 60,        // 360 min
   scattoMinimoStraordinario: 30,
   scattoSuccessivoStraordinario: 15,
-  tettoBancaOre: 40 * 60             // 2400 min
+  tettoBancaOre: 40 * 60,            // 2400 min
+  santoPatrono: '06-24',             // S. Giovanni (Busto Arsizio), personalizzabile ('' = nessuno)
+  festiviExtra: ''                   // altri festivi ricorrenti 'MM-DD' separati da virgola
 };
 
 function parseTimeToMinutes(str) {
@@ -43,12 +45,28 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   const dayOfWeek = dateObj.getDay(); // 0=Dom, 1=Lun, ..., 5=Ven, 6=Sab
   const isVenerdi = (dayOfWeek === 5);
   const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-  const oreDovute = isWeekend ? 0 : (isVenerdi ? PARAMETRI.oreTeoricheVenerdi : PARAMETRI.oreTeoricheLunGio);
+  const yStr = dataStr.slice(0, 4);
+  const mmdd = dataStr.slice(5);
+
+  // Verifica festivo (incluso Santo Patrono e festiviExtra)
+  let isFestivo = false;
+  if (typeof PARAMETRI !== 'undefined') {
+    const sp = PARAMETRI.santoPatrono || '06-24';
+    if (sp && mmdd === sp) isFestivo = true;
+    if (PARAMETRI.festiviExtra) {
+      const extra = String(PARAMETRI.festiviExtra).split(',').map(s => s.trim());
+      if (extra.includes(mmdd)) isFestivo = true;
+    }
+  }
+  const fissiNazionali = ['01-01', '01-06', '04-25', '05-01', '06-02', '08-15', '11-01', '12-08', '12-25', '12-26'];
+  if (fissiNazionali.includes(mmdd)) isFestivo = true;
+
+  const oreDovute = (isWeekend || isFestivo) ? 0 : (isVenerdi ? PARAMETRI.oreTeoricheVenerdi : PARAMETRI.oreTeoricheLunGio);
 
   const attenzioni = [];
   const scopertiOrari = []; // [{ tipoScoperto, inizio, fine, durataMin, label }]
 
-  // 1. Estrazione passaggi
+  // 1. Estrazione passaggi (incluso riconoscimento uscite/entrate per visita medica)
   const timbEntrate = timbratureGiorno.filter(t => t.tipo === 'E').sort((a,b) => parseTimeToMinutes(a.ora) - parseTimeToMinutes(b.ora));
   const primaEntrata = timbEntrate.length > 0 ? timbEntrate[0] : null;
 
@@ -61,6 +79,10 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   const timbUscite = timbratureGiorno.filter(t => t.tipo === 'U').sort((a,b) => parseTimeToMinutes(b.ora) - parseTimeToMinutes(a.ora));
   const ultimaUscitaMin = timbUscite.length > 0 ? parseTimeToMinutes(timbUscite[0].ora) : null;
 
+  // Timbrature intermedie (es. uscita e rientro per visita medica)
+  const timbUscitaIntermedia = timbratureGiorno.find(t => t.tipo === 'U VISITA MEDICA' || (t.tipo === 'U' && t !== timbUscite[0]));
+  const uscitaIntermediaMin = timbUscitaIntermedia ? parseTimeToMinutes(timbUscitaIntermedia.ora) : null;
+
   if (timbratureGiorno.some(t => t.fittizia)) {
     attenzioni.push('Timbrature fittizie presenti');
   }
@@ -69,6 +91,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   let entrataRawMin = null;
   let entrataNormMin = null;
   let ritardoIngressoMin = 0;
+  let ritardoIngressoRealeMin = 0; // effettivo ritardo non coperto da anticipare
   let ingressoSoloPomeriggio = false;
 
   if (primaEntrata) {
@@ -108,85 +131,108 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   // 4. Giustificativi e fasce orarie coperte
   let oreGiustificateMin = 0;
   let smartWorkingMin = 0;
-  const intervalliGiust = []; // [{ ini, fin, dur, tipo }]
+  const intervalliGiust = []; // [{ ini, fin, dur, tipo, isFull }]
   let minutiGiustSenzaOrario = 0;
+  const giustPerTipo = {};
 
-  giustificativiGiorno.forEach(g => {
-    if (g.tipo === 'STRAORDINARIO PAUSA' || g.tipo === 'PAUSA NON TIMBRATA') return;
-    const tPrima = parseTimeToMinutes(g.tragittoPrima) || 0;
-    const tDopo = parseTimeToMinutes(g.tragittoDopo) || 0;
-    const iniRaw = parseTimeToMinutes(g.oraInizio);
-    const finRaw = parseTimeToMinutes(g.oraFine);
+  // Se giornata festiva, la giornata è coperta d'ufficio e non consuma giustificativi
+  if (isFestivo || oreDovute === 0) {
+    giustificativiGiorno.forEach(g => {
+      giustPerTipo[g.tipo] = 0;
+    });
+  } else {
+    giustificativiGiorno.forEach(g => {
+      if (g.tipo === 'STRAORDINARIO PAUSA' || g.tipo === 'PAUSA NON TIMBRATA') return;
+      const tPrima = parseTimeToMinutes(g.tragittoPrima) || 0;
+      const tDopo = parseTimeToMinutes(g.tragittoDopo) || 0;
+      const iniRaw = parseTimeToMinutes(g.oraInizio);
+      const finRaw = parseTimeToMinutes(g.oraFine);
 
-    let dur = 0;
-    if (g.tuttaGiornata && oreDovute > 0) {
-      dur = oreDovute;
-    } else if (g.durata) {
-      dur = parseTimeToMinutes(g.durata) || 0;
-      // Normalizza eventuali durate storiche a 1 min dallo scatto (es. 1:29 da 09:00-10:29 -> 1:30)
-      if (g.tipo !== 'VISITA MEDICA' && dur > 0 && dur % 15 === 14) {
-        dur += 1;
+      let dur = 0;
+      if (g.tuttaGiornata && oreDovute > 0) {
+        dur = oreDovute;
+      } else if (g.durata) {
+        dur = parseTimeToMinutes(g.durata) || 0;
+        // Normalizza eventuali durate storiche a 1 min dallo scatto (es. 1:29 da 09:00-10:29 -> 1:30)
+        if (g.tipo !== 'VISITA MEDICA' && dur > 0 && dur % 15 === 14) {
+          dur += 1;
+        }
+      } else if (iniRaw !== null && finRaw !== null && finRaw > iniRaw) {
+        dur = finRaw - iniRaw;
+        const pIni = PARAMETRI.pausaInizioFinestra || 735;
+        if (g.tipo !== 'VISITA MEDICA' && !isVenerdi && !isWeekend && iniRaw < pIni && finRaw > PARAMETRI.pausaFineFinestra && inizioPausaMin === null) {
+          dur = Math.max(0, dur - PARAMETRI.pausaMinimaMinuti);
+        }
       }
-    } else if (iniRaw !== null && finRaw !== null && finRaw > iniRaw) {
-      dur = finRaw - iniRaw;
-      const pIni = PARAMETRI.pausaInizioFinestra || 735;
-      if (g.tipo !== 'VISITA MEDICA' && !isVenerdi && !isWeekend && iniRaw < pIni && finRaw > PARAMETRI.pausaFineFinestra && inizioPausaMin === null) {
-        dur = Math.max(0, dur - PARAMETRI.pausaMinimaMinuti);
-      }
-    }
 
-    const totG = dur + tPrima + tDopo;
-    oreGiustificateMin += totG;
-    if (g.tipo === 'SMART WORKING') smartWorkingMin += totG;
-
-    if (g.tuttaGiornata) {
-      intervalliGiust.push({ ini: 0, fin: 24 * 60, dur: totG, tipo: g.tipo });
-    } else if (iniRaw !== null && finRaw !== null && finRaw > iniRaw) {
-      const effIni = Math.max(0, iniRaw - tPrima);
-      let effFin = finRaw + tDopo;
-      // Se la fine del giustificativo coincide con la timbratura effettiva d'entrata (es. 10:29), copre fino allo scatto normalizzato (10:30)
-      if (entrataRawMin !== null && Math.abs(effFin - entrataRawMin) <= 1 && entrataNormMin !== null && entrataNormMin > effFin) {
-        effFin = entrataNormMin;
+      // Arrotondamento a scatti di 15 min per assenze brevi se non intera giornata (es. RST 17:19-17:25 -> 15 min, FER 14:00-14:58 -> 45 min)
+      if (!g.tuttaGiornata && dur > 0 && dur % 15 !== 0 && g.tipo !== 'VISITA MEDICA') {
+        dur = Math.ceil(dur / 15) * 15;
       }
-      intervalliGiust.push({ ini: effIni, fin: effFin, dur: totG, tipo: g.tipo });
-    } else {
-      minutiGiustSenzaOrario += totG;
-    }
-  });
+
+      const totG = dur + tPrima + tDopo;
+      oreGiustificateMin += totG;
+      giustPerTipo[g.tipo] = (giustPerTipo[g.tipo] || 0) + totG;
+      if (g.tipo === 'SMART WORKING') smartWorkingMin += totG;
+
+      if (g.tuttaGiornata) {
+        intervalliGiust.push({ ini: 0, fin: 24 * 60, dur: totG, tipo: g.tipo, isFull: true });
+      } else if (iniRaw !== null && finRaw !== null && finRaw > iniRaw) {
+        const effIni = Math.max(0, iniRaw - tPrima);
+        let effFin = finRaw + tDopo;
+        // Se la fine del giustificativo coincide con la timbratura effettiva d'entrata (es. 10:29), copre fino allo scatto normalizzato (10:30)
+        if (entrataRawMin !== null && Math.abs(effFin - entrataRawMin) <= 1 && entrataNormMin !== null && entrataNormMin > effFin) {
+          effFin = entrataNormMin;
+        }
+        intervalliGiust.push({ ini: effIni, fin: effFin, dur: totG, tipo: g.tipo, isFull: false });
+      } else {
+        minutiGiustSenzaOrario += totG;
+      }
+    });
+  }
 
   const oreAssenzaGiustificataMin = Math.max(0, oreGiustificateMin - smartWorkingMin);
 
   // 5. Pausa Effettiva / In corso
   const hasStraordPausa = giustificativiGiorno.some(g => g.tipo === 'STRAORDINARIO PAUSA');
   const hasPausaNonTimbrata = giustificativiGiorno.some(g => g.tipo === 'PAUSA NON TIMBRATA');
+  const hasSmartWorking = smartWorkingMin > 0;
+  const isVisitaMedicaPranzo = giustificativiGiorno.some(g => g.tipo === 'VISITA MEDICA') && uscitaIntermediaMin !== null && finePausaMin !== null && inizioPausaMin === null;
 
   let pausaEffettivaMin = 0;
   let pausaConvertitaStraordMin = 0;
   let isPausaInCorso = false;
 
-  if (isVenerdi || isWeekend || ingressoSoloPomeriggio) {
-    if (!ingressoSoloPomeriggio && inizioPausaMin !== null && finePausaNormMin !== null) {
+  if (isVenerdi) {
+    if (inizioPausaMin !== null && finePausaNormMin !== null) {
       const durataTimbrata = Math.max(0, finePausaNormMin - inizioPausaMin);
       pausaEffettivaMin = Math.max(PARAMETRI.pausaMinimaMinuti, durataTimbrata);
-    } else if (isVenerdi) {
-      const orarioCorrente = (ultimaUscitaMin !== null) ? ultimaUscitaMin : (nowMinutes !== null ? nowMinutes : null);
-      // Pausa di 30 min detratta solo se si raggiungono 30 min di straordinario oltre le ore dovute;
-      // altrimenti il conteggio si arrotonda per difetto alle 6 ore (nessuna pausa detratta).
-      if (entrataNormMin !== null && orarioCorrente !== null && (orarioCorrente - entrataNormMin) > oreDovute) {
-        const eccesso = (orarioCorrente - entrataNormMin) - oreDovute;
-        if (eccesso >= PARAMETRI.scattoMinimoStraordinario) {
-          pausaEffettivaMin = PARAMETRI.pausaMinimaMinuti;
-          attenzioni.push('Pausa obbligatoria di 30 min applicata (raggiunti 30 min di straordinario oltre le 6 ore di venerdì)');
-        } else {
-          pausaEffettivaMin = eccesso;
-          attenzioni.push(`Venerdì: ${eccesso} min oltre le 6 ore non riconosciuti (arrotondato per difetto a 6h, nessuna pausa detratta)`);
-        }
-      } else {
-        pausaEffettivaMin = 0;
-      }
+    } else {
+      // Regola Inaz per il venerdì continuato: NON detrae mai i 30 min di pausa obbligatoria.
+      pausaEffettivaMin = 0;
     }
+  } else if (isWeekend) {
+    if (inizioPausaMin !== null && finePausaNormMin !== null) {
+      const durataTimbrata = Math.max(0, finePausaNormMin - inizioPausaMin);
+      pausaEffettivaMin = Math.max(PARAMETRI.pausaMinimaMinuti, durataTimbrata);
+    } else {
+      pausaEffettivaMin = 0;
+    }
+  } else if (ingressoSoloPomeriggio) {
+    // Ingresso pomeridiano senza E mattutina (es. 21/04 E 12:53): nessuna pausa da dedurre
+    pausaEffettivaMin = 0;
+  } else if (isVisitaMedicaPranzo) {
+    // Visita medica a cavallo del pranzo (es. 05/03: U 11:31 per visita medica fine 12:45, E PAUSA 14:00)
+    // La pausa effettiva va dalla fine della visita medica (12:45) al rientro (14:00) = 75 min
+    const gVisita = giustificativiGiorno.find(g => g.tipo === 'VISITA MEDICA');
+    const finVisita = gVisita ? (parseTimeToMinutes(gVisita.oraFine) || (uscitaIntermediaMin + 75)) : (uscitaIntermediaMin + 75);
+    pausaEffettivaMin = Math.max(PARAMETRI.pausaMinimaMinuti, Math.max(0, finePausaMin - finVisita));
+  } else if (hasSmartWorking && ultimaUscitaMin !== null && inizioPausaMin === null && finePausaMin === null) {
+    // Giornata mista Ufficio + Smart Working pomeridiano: la pausa di 30 min è già gestita tra le due modalità
+    pausaEffettivaMin = 0;
   } else {
     if (inizioPausaMin !== null && finePausaNormMin !== null) {
+      // Inaz: se rientra dopo le 14:15 la pausa effettiva comprende il rientro effettivo normalizzato a scatti di 15 min
       const durataTimbrata = Math.max(0, finePausaNormMin - inizioPausaMin);
       pausaEffettivaMin = Math.max(PARAMETRI.pausaMinimaMinuti, durataTimbrata);
     } else if (inizioPausaMin !== null && finePausaNormMin === null) {
@@ -309,7 +355,33 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
     // È uscita anticipata se esce prima delle 17:15 (Lun-Gio) OPPURE se (lavoro + giustificativi + eventuale ritardo mattutino da giustificare) non copre le ore dovute
     const mancaFineGiornata = oreDovute > 0 && (lavoroGrezzoMin + oreGiustificateMin + infoRitIngresso.scopertoMin + infoRitPausa.scopertoMin) < oreDovute;
 
-    if (uscitaPrima1715LunGio && lavoroGrezzoMin < oreDovute) {
+    if (isVenerdi && oreGiustificateMin === 0) {
+      // Regola venerdì Inaz continuato:
+      // se tra 6h01m e 6h29m: arrotonda per difetto a 6h00m (straordinario = 0).
+      // da 6h30m in su: riconosce tutto lo straordinario a scatti di 15m (6h30 -> +0:30, 6h50 -> +0:45)
+      const eccessoVen = lavoroGrezzoMin - oreDovute;
+      if (eccessoVen > 0 && eccessoVen < PARAMETRI.scattoMinimoStraordinario) {
+        oreLavorateMin = oreDovute;
+        uscitaConteggiataMin = entrataNormMin + oreDovute;
+        attenzioni.push(`Venerdì: ${eccessoVen} min oltre le 6 ore non riconosciuti (arrotondato per difetto a 6h, nessuna pausa detratta)`);
+      } else {
+        oreLavorateMin = lavoroGrezzoMin;
+        uscitaConteggiataMin = ultimaUscitaMin;
+      }
+    } else if (hasSmartWorking && ultimaUscitaMin !== null) {
+      // Giornata mista Ufficio + Smart Working pomeridiano:
+      // Inaz calcola le ore lavorate in sede direttamente dall'orario di uscita normalizzato
+      // e assegna la quota residua allo smart working (al netto della pausa obbligatoria di 30 min)
+      const lavSedeGrezzo = Math.max(0, ultimaUscitaMin - entrataNormMin);
+      oreLavorateMin = Math.floor(lavSedeGrezzo / 15) * 15;
+      uscitaConteggiataMin = entrataNormMin + oreLavorateMin;
+      const targetTotale = oreDovute > 0 ? oreDovute : 480;
+      if (oreLavorateMin + smartWorkingMin > targetTotale) {
+        smartWorkingMin = Math.max(0, targetTotale - oreLavorateMin);
+        oreGiustificateMin = smartWorkingMin;
+        giustPerTipo['SMART WORKING'] = smartWorkingMin;
+      }
+    } else if (uscitaPrima1715LunGio && lavoroGrezzoMin < oreDovute) {
       // Uscita anticipata con meno delle ore intere (es. 17/11: E 08:23, U 13:10 -> 4h47m -> 4h45m, uscita conteggiata 13:08)
       oreLavorateMin = Math.floor(lavoroGrezzoMin / 15) * 15;
       uscitaConteggiataMin = entrataNormMin + pausaEffettivaMin + oreLavorateMin;
@@ -341,34 +413,63 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
     attenzioni.push('Uscita mancante');
   }
 
+  // Se c'è un ritardo mattutino d'ingresso scoperto non giustificato (> 09:00, es. 03/09 E 09:01),
+  // l'orario ordinario massimo dovuto per la giornata viene decurtato di tale ritardo
+  const ritardoIngressoScopertoMin = infoRitIngresso.scopertoMin;
+  const targetOrdinarioGiorno = Math.max(0, oreDovute - ritardoIngressoScopertoMin);
+
+  // Riduzione delle FERIE mattutine parziali se il lavoro prolungato copre le ore (es. 23/04, 14/09)
+  let ferieEffettiveMin = giustPerTipo['FERIE'] || 0;
+  const gFerie = giustificativiGiorno.find(g => g.tipo === 'FERIE' && !g.tuttaGiornata);
+  if (gFerie && ferieEffettiveMin > 0 && oreDovute > 0 && !isFestivo) {
+    const totSvoltoGrezzo = oreLavorateMin + oreGiustificateMin;
+    if (totSvoltoGrezzo > targetOrdinarioGiorno) {
+      const eccedenzaAssorbibile = Math.floor((totSvoltoGrezzo - targetOrdinarioGiorno) / 15) * 15;
+      const riduzione = Math.min(ferieEffettiveMin, eccedenzaAssorbibile);
+      if (riduzione > 0) {
+        ferieEffettiveMin -= riduzione;
+        oreGiustificateMin -= riduzione;
+        giustPerTipo['FERIE'] = ferieEffettiveMin;
+      }
+    }
+  }
+
+  // Quota netta di PERMESSO NON RETRIBUITO (non genera ore retribuite ma copre lo scoperto)
+  const permessoNonRetrGrezzo = giustPerTipo['PERMESSO NON RETRIBUITO'] || 0;
+  let permessoNonRetrNettoMin = 0;
+  if (permessoNonRetrGrezzo > 0) {
+    oreGiustificateMin = Math.max(0, oreGiustificateMin - permessoNonRetrGrezzo);
+    giustPerTipo['PERMESSO NON RETRIBUITO'] = 0;
+    permessoNonRetrNettoMin = permessoNonRetrGrezzo;
+  }
+
   const oreTotaliSvolteMin = oreLavorateMin + oreGiustificateMin;
+  const oreOrdinarieMin = Math.min(targetOrdinarioGiorno, oreTotaliSvolteMin);
 
-  // 9. Compensazione ritardi con eventuale straordinario (a quarti d'ora) e generazione scopertiOrari esatti
+  // 9. Calcolo Straordinario ed eliminazione doppio addebito ritardo pausa
   const uscitaPrimaPalettoLunGio = (!isVenerdi && !isWeekend && ultimaUscitaMin !== null && ultimaUscitaMin < PARAMETRI.uscitaMinimaLunGio);
-  const eccedenzaGrezzaMin = uscitaPrimaPalettoLunGio ? pausaConvertitaStraordMin : Math.max(0, oreTotaliSvolteMin - oreDovute);
-  const eccedenzaCompensabileQuarti = Math.floor(eccedenzaGrezzaMin / 15) * 15;
-
-  let ritIngrScopertoFinale = infoRitIngresso.scopertoMin;
-  let ritPausaScopertoFinale = infoRitPausa.scopertoMin;
-  let compUsata = 0;
-
-  if (ritIngrScopertoFinale > 0 && eccedenzaCompensabileQuarti > 0) {
-    const c1 = Math.min(ritIngrScopertoFinale, eccedenzaCompensabileQuarti);
-    ritIngrScopertoFinale -= c1;
-    compUsata += c1;
-  }
-  if (ritPausaScopertoFinale > 0 && (eccedenzaCompensabileQuarti - compUsata) > 0) {
-    const c2 = Math.min(ritPausaScopertoFinale, eccedenzaCompensabileQuarti - compUsata);
-    ritPausaScopertoFinale -= c2;
-    compUsata += c2;
-  }
-
-  const ritardoTotaleNonCoperto = infoRitIngresso.scopertoMin + infoRitPausa.scopertoMin;
-  const eccedenzaNettaMin = Math.max(0, eccedenzaGrezzaMin - ritardoTotaleNonCoperto);
-
   let straordinarioNettoMin = 0;
-  if (eccedenzaNettaMin >= PARAMETRI.scattoMinimoStraordinario) {
-    straordinarioNettoMin = Math.floor(eccedenzaNettaMin / PARAMETRI.scattoSuccessivoStraordinario) * PARAMETRI.scattoSuccessivoStraordinario;
+  const eccedenzaGrezzaMin = uscitaPrimaPalettoLunGio ? pausaConvertitaStraordMin : Math.max(0, oreTotaliSvolteMin - targetOrdinarioGiorno);
+  if (eccedenzaGrezzaMin >= PARAMETRI.scattoMinimoStraordinario) {
+    straordinarioNettoMin = Math.floor(eccedenzaGrezzaMin / PARAMETRI.scattoSuccessivoStraordinario) * PARAMETRI.scattoSuccessivoStraordinario;
+  }
+
+  // Se la giornata complessiva copre l'orario dovuto (o il target ordinario),
+  // il rientro dalla pausa oltre le 14:15 non lascia scoperti non giustificati
+  let ritIngrScopertoFinale = ritardoIngressoScopertoMin;
+  let ritPausaScopertoFinale = infoRitPausa.scopertoMin;
+  if (oreTotaliSvolteMin >= oreDovute) {
+    ritPausaScopertoFinale = 0;
+  }
+  if (permessoNonRetrNettoMin > 0) {
+    if (ritIngrScopertoFinale > 0) {
+      const c = Math.min(ritIngrScopertoFinale, permessoNonRetrNettoMin);
+      ritIngrScopertoFinale -= c;
+    }
+    if (ritPausaScopertoFinale > 0) {
+      const c = Math.min(ritPausaScopertoFinale, permessoNonRetrNettoMin);
+      ritPausaScopertoFinale -= c;
+    }
   }
 
   // Costruzione fasce orarie scoperte (quando la giornata ha l'uscita timbrata)
@@ -450,12 +551,8 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
 
   minutiGiustificativoRichiesti = scopertiOrari.reduce((acc, s) => acc + s.durataMin, 0);
 
-  if (compUsata > 0 && ritIngrScopertoFinale === 0 && ritPausaScopertoFinale === 0) {
-    attenzioni.push(`Ritardo compensato (${compUsata} min)`);
-  }
-
   // Minuti oltre l'orario e calcolo prossimo scatto live
-  let minutiOltreOrario = eccedenzaNettaMin;
+  let minutiOltreOrario = eccedenzaGrezzaMin;
   let minutiAlProssimoScatto = 0;
   let orarioProssimoScatto = null;
   let valoreProssimoScatto = 0;
@@ -494,6 +591,10 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
     scopertiOrari,
     pausaEffettivaMin,
     oreLavorateMin,
+    oreOrdinarieMin,
+    ferieEffettiveMin,
+    permessoNonRetrNettoMin,
+    giustPerTipo,
     oreGiustificateMin,
     smartWorkingMin,
     oreAssenzaGiustificataMin,
