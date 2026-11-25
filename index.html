@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="it" data-ver="4.4">
+<html lang="it" data-ver="4.6">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -352,6 +352,18 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
           <small class="note">Predefinito: 15 minuti</small>
         </div>
       </div>
+      <div class="two">
+        <div class="f">
+          <label style="font-weight:600">Santo Patrono (GG/MM)</label>
+          <input type="text" id="paramSantoPatrono" placeholder="es. 24/06 (vuoto = nessuno)">
+          <small class="note">Predefinito: 24/06 (S. Giovanni). Lascia vuoto per disattivarlo</small>
+        </div>
+        <div class="f">
+          <label style="font-weight:600">Altri festivi ricorrenti (GG/MM)</label>
+          <input type="text" id="paramFestiviExtra" placeholder="es. 07/12, 15/09">
+          <small class="note">Eventuali altre festività locali, separate da virgola</small>
+        </div>
+      </div>
     </div>
 
     <div style="display:flex;gap:10px;margin-top:18px">
@@ -471,7 +483,7 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 
 <div class="modal" id="modalGiust"><div class="sheet"><h3 id="titModalGiust">Nuovo giustificativo</h3>
   <div id="giustScopertoHint" class="alert" style="display:none;margin-bottom:10px;padding:8px 10px;font-size:0.8rem"></div>
-  <div class="f"><label>Tipo di giustificativo</label><select id="selTipoGiust" onchange="aggiornaFormGiust()"><option value="FERIE">Ferie</option><option value="EX-FESTIVITÀ">Ex-festività</option><option value="ORE RECUPERO">Ore recupero straordinari</option><option value="SMART WORKING">Smart working</option><option value="VISITA MEDICA">Visita medica</option><option value="MALATTIA">Malattia</option><option value="CONGEDO PARENTALE">Congedo parentale (30%)</option><option value="ORE 4 NOVEMBRE">Ore 4 novembre (extra)</option><option value="SCIOPERO">Sciopero (intera giornata)</option><option value="PAUSA NON TIMBRATA">Pausa non timbrata</option><option value="STRAORDINARIO PAUSA">Straordinario pausa (autorizzato)</option></select><small id="limiteInfo" class="note"></small></div>
+  <div class="f"><label>Tipo di giustificativo</label><select id="selTipoGiust" onchange="aggiornaFormGiust()"><option value="FERIE">Ferie</option><option value="EX-FESTIVITÀ">Ex-festività</option><option value="ORE RECUPERO">Ore recupero straordinari</option><option value="SMART WORKING">Smart working</option><option value="VISITA MEDICA">Visita medica</option><option value="MALATTIA">Malattia</option><option value="CONGEDO PARENTALE">Congedo parentale (30%)</option><option value="DONAZIONE SANGUE">Donazione Sangue</option><option value="PERMESSO NON RETRIBUITO">Permesso non retribuito</option><option value="ORE 4 NOVEMBRE">Ore 4 novembre (extra)</option><option value="SCIOPERO">Sciopero (intera giornata)</option><option value="PAUSA NON TIMBRATA">Pausa non timbrata</option><option value="STRAORDINARIO PAUSA">Straordinario pausa (autorizzato)</option></select><small id="limiteInfo" class="note"></small></div>
   <div id="visitaFields" style="display:none"><div class="two"><div class="f"><label>Dalle (inizio visita)</label><input type="time" id="visitaInizio" value="12:00"></div><div class="f"><label>Alle (fine visita)</label><input type="time" id="visitaFine" value="12:30"></div></div><label class="chk"><input type="checkbox" id="chkTragittoPrima" checked> Tragitto prima (30 min)</label><label class="chk"><input type="checkbox" id="chkTragittoDopo" checked> Tragitto dopo (30 min)</label></div>
   <div id="durataFields" style="display:none">
     <label class="chk" style="margin:6px 0 10px;padding:8px 10px;background:var(--bg);border:1px solid var(--line);border-radius:9px;font-weight:600;color:var(--navy)">
@@ -550,7 +562,7 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 
 <div id="toast" role="status"></div>
 <footer id="ver" style="text-align:center;font-size:.72rem;margin-top:18px"></footer>
-<script src="seed.js?v=4.40"></script><script src="calculator.js?v=4.40"></script><script src="app.js?v=4.40"></script><script type="module" src="firebase-sync.js?v=4.40"></script>
+<script src="seed.js?v=4.42"></script><script src="calculator.js?v=4.42"></script><script src="app.js?v=4.42"></script><script type="module" src="firebase-sync.js?v=4.42"></script>
 <!-- Modal Chiusura Aziendale -->
 <div class="modal" id="modalChiusura">
   <div class="modal-content">
@@ -809,6 +821,10 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
       <label class="btn main" style="background:#107c41;border-color:#107c41;text-align:center;padding:11px;display:block;cursor:pointer">
         📤 Carica nuovo modello .xlsx (se varia in futuro)
         <input type="file" id="fileModelloExcel" accept=".xlsx" style="display:none" onchange="caricaNuovoModelloExcel(event)">
+      </label>
+      <label class="btn sec" style="text-align:center;padding:10px;display:block;cursor:pointer;border-color:#107c41;color:#107c41">
+        📥 Importa attività svolte da Excel compilato (.xlsx)
+        <input type="file" id="fileImportAttExcel" accept=".xlsx" style="display:none" onchange="importaAttivitaDaExcelFile(event)">
       </label>
 
       <button type="button" class="btn sec" id="btnRipristinaModelloDefault" style="display:none;padding:9px" onclick="ripristinaModelloExcelPredefinito()">
