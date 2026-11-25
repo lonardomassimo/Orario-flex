@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="it" data-ver="4.6">
+<html lang="it" data-ver="4.44">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -461,6 +461,14 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
       <button class="btn main" style="background:#107c41;border-color:#107c41;padding:7px 12px" onclick="apriModalSyncCloud()">Gestisci</button>
     </div>
 
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;border:1px solid #c7d2fe;background:rgba(79,70,229,0.04)">
+      <div>
+        <b style="color:var(--brand)">📥 Dati storici Inaz (Marzo - Ottobre 2026)</b>
+        <div style="font-size:0.8rem;color:var(--muted)">436 timbrature e 60 giustificativi ufficiali estratti dal portale Inaz.</div>
+      </div>
+      <button class="btn main" style="padding:7px 12px;white-space:nowrap" onclick="caricaDatiStoriciInaz()">Importa dati</button>
+    </div>
+
     <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;border:1px solid var(--line)">
       <div>
         <b>💾 Backup locale su file (.json)</b>
@@ -556,6 +564,11 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 
 <div class="modal" id="modalSync"><div class="sheet"><h3>Backup e ripristino</h3><p class="note" style="margin:0 0 12px">I dati restano nel browser: scarica un backup per spostarli tra PC e telefono.</p>
   <button class="btn main" style="width:100%" onclick="esportaDati()">Scarica backup</button>
+  <div style="margin:14px 0;padding:10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)">
+    <div style="font-weight:600;font-size:0.88rem;margin-bottom:4px">Dati storici Inaz (01/03/2026 - 31/10/2026)</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">436 timbrature e 60 giustificativi verificati al 100% con il portale Inaz.</div>
+    <button class="btn sec" style="width:100%;font-weight:600" onclick="caricaDatiStoriciInaz()">📥 Ricarica timbrature storiche Inaz</button>
+  </div>
   <div class="f" style="margin-top:14px"><label>Ripristina da file</label><input type="file" id="fileImport" accept=".json"></div>
   <div class="foot"><button class="btn" onclick="importaDati()">Ripristina</button><button class="btn" onclick="chiudiModal('modalSync')">Chiudi</button></div></div></div>
 
@@ -563,7 +576,7 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 
 <div id="toast" role="status"></div>
 <footer id="ver" style="text-align:center;font-size:.72rem;margin-top:18px"></footer>
-<script src="seed.js?v=4.43"></script><script src="calculator.js?v=4.43"></script><script src="app.js?v=4.43"></script><script type="module" src="firebase-sync.js?v=4.43"></script>
+<script src="seed.js?v=4.44"></script><script src="calculator.js?v=4.44"></script><script src="app.js?v=4.44"></script><script type="module" src="firebase-sync.js?v=4.44"></script>
 <!-- Modal Chiusura Aziendale -->
 <div class="modal" id="modalChiusura">
   <div class="modal-content">
