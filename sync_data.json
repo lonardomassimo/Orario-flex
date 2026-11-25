@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-25T09:18:56.412Z",
+  "updatedAt": "2026-11-25T09:22:30.911Z",
   "S": {
     "t": [
       {
@@ -1952,6 +1952,12 @@
         "data": "2026-11-23",
         "testo": "prova",
         "fatto": true
+      },
+      {
+        "id": "mwvx0jhlig8",
+        "data": "2026-11-25",
+        "testo": "rilievo picchetti SNAM piazzale Crespi",
+        "fatto": false
       }
     ],
     "busta": {},
@@ -2046,7 +2052,8 @@
     "exportedAttDays": {
       "2026-11-24": true,
       "2026-11-03": true,
-      "2026-11-25": true
+      "2026-11-25": true,
+      "2026-11-23": true
     }
   }
 }
