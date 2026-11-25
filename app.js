@@ -1,9 +1,9 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.4', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.6', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {} });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
-const TIPI_DURATA = ['FERIE', 'EX-FESTIVITÀ', 'ORE RECUPERO', 'MALATTIA', 'SMART WORKING', 'ORE 4 NOVEMBRE', 'CONGEDO PARENTALE'];
+const TIPI_DURATA = ['FERIE', 'EX-FESTIVITÀ', 'ORE RECUPERO', 'MALATTIA', 'SMART WORKING', 'ORE 4 NOVEMBRE', 'CONGEDO PARENTALE', 'DONAZIONE SANGUE', 'PERMESSO NON RETRIBUITO'];
 const LIMITI = { 'EX-FESTIVITÀ': 30 * 60, 'VISITA MEDICA': 30 * 60 }, FERIE_ANNO = 168 * 60, SW_SETT = 480;
 const PZ_KEY = { 'FERIE': 'ferie', 'EX-FESTIVITÀ': 'ex', 'VISITA MEDICA': 'visite', 'MALATTIA': 'malattia', 'ORE 4 NOVEMBRE': 'nov4', 'ORE RECUPERO': 'rec' };
 const CATEGORIE = ['Manutenzione ordinaria AGESP', 'Manutenzione straordinaria AGESP', 'Manutenzione ordinaria Comune', 'Manutenzione straordinaria Comune'];
@@ -82,9 +82,27 @@ function festivi(y) {
   if (festivi.c[y]) return festivi.c[y];
   const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
   const pq = iso0(new Date(y, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 2));
-  return festivi.c[y] = new Set(['01-01', '01-06', '04-25', '05-01', '06-02', '08-15', '11-01', '12-08', '12-25', '12-26'].map(x => `${y}-${x}`).concat(pq));
+  const fissi = ['01-01', '01-06', '04-25', '05-01', '06-02', '08-15', '11-01', '12-08', '12-25', '12-26'];
+  const sp = (typeof PARAMETRI !== 'undefined' && PARAMETRI.santoPatrono !== undefined) ? PARAMETRI.santoPatrono : '06-24';
+  if (sp) fissi.push(sp);
+  String((typeof PARAMETRI !== 'undefined' && PARAMETRI.festiviExtra) || '').split(',').map(s => s.trim()).filter(s => /^\d{2}-\d{2}$/.test(s)).forEach(s => fissi.push(s));
+  return festivi.c[y] = new Set(fissi.map(x => y + '-' + x).concat(pq));
 }
 festivi.c = {};
+// Parsing data ricorrente "GG/MM" (o "GG-MM") -> "MM-DD"; '' se vuota, null se non valida
+function parseGiornoMeseRicorrente(str) {
+  const s = String(str || '').trim();
+  if (!s) return '';
+  const m = /^(\d{1,2})\s*[\/\-.]\s*(\d{1,2})$/.exec(s);
+  if (!m) return null;
+  const g = +m[1], me = +m[2];
+  if (me < 1 || me > 12 || g < 1 || g > new Date(2024, me, 0).getDate()) return null;
+  return String(me).padStart(2, '0') + '-' + String(g).padStart(2, '0');
+}
+function fmtGiornoMeseIT(mmdd) {
+  const m = /^(\d{2})-(\d{2})$/.exec(String(mmdd || ''));
+  return m ? m[2] + '/' + m[1] : '';
+}
 const tipoGiorno = iso => ({ rip: dow(iso) === 0 || dow(iso) === 6, fest: festivi(+iso.slice(0, 4)).has(iso) });
 const lavorativo = iso => { const t = tipoGiorno(iso); return !t.rip && !t.fest; };
 const ultimoMese = (y, m) => new Date(y, m, 0).getDate();
@@ -130,7 +148,13 @@ const primoAnno = () => Math.min(+todayISO().slice(0, 4), ...giorniConDati().map
 // ---------- Contatori annuali con riporti ----------
 function usatoAnno(tipo, y, fino) {
   const p = pzAttivo(y), ok = g => tipo === 'ORE RECUPERO' ? isRecupero(g.tipo) : g.tipo === tipo;
-  return S.g.filter(g => g.data.startsWith(y) && (!p || g.data > p.data) && (!fino || g.data <= fino) && ok(g)).reduce((a, g) => a + uso(g), 0) + (p ? p[PZ_KEY[tipo]] || 0 : 0);
+  return S.g.filter(g => g.data.startsWith(y) && (!p || g.data > p.data) && (!fino || g.data <= fino) && ok(g)).reduce((a, g) => {
+    if (tipo === 'FERIE') {
+      const dayCalc = calcDay(g.data);
+      if (dayCalc && dayCalc.ferieEffettiveMin !== undefined) return a + dayCalc.ferieEffettiveMin;
+    }
+    return a + uso(g);
+  }, 0) + (p ? p[PZ_KEY[tipo]] || 0 : 0);
 }
 // Ferie: l'avanzo passa all'anno dopo ma va usato entro il 30 giugno
 const carryFerie = y => { const p = pzAttivo(y); return p ? p.ferieRip || 0 : +y <= primoAnno() ? 0 : fineFerie(String(+y - 1)); };
@@ -225,6 +249,8 @@ function iconeGiust(tipo) {
   if (isRecupero(tipo)) return '⏱️';
   if (tipo === 'CONGEDO PARENTALE') return '👶';
   if (tipo === 'SCIOPERO') return '✊';
+  if (tipo === 'DONAZIONE SANGUE') return '🩸';
+  if (tipo === 'PERMESSO NON RETRIBUITO') return '⏳';
   return '📋';
 }
 
@@ -1031,11 +1057,10 @@ function salvaGiustificativo() {
   if (editGiustIdx !== null && S.g[editGiustIdx] && S.g[editGiustIdx].tipo === tipo && r !== null) {
     r += uso(S.g[editGiustIdx]);
   }
-  if (r !== null && req > r) {
+  if (r !== null && req > r && tipo !== 'SMART WORKING') {
     return alert(
       tipo === 'ORE RECUPERO' ? `Ore recupero insufficienti: disponibili ${F(Math.max(0, r))}, richieste ${F(req)}.\nSi sblocca accantonando altro straordinario.`
       : tipo === 'ORE 4 NOVEMBRE' ? `Ore 4 novembre disponibili: ${F(Math.max(0, r))}, richieste ${F(req)}.`
-      : tipo === 'SMART WORKING' ? `Smart working massimo 8h a settimana: residuo ${F(Math.max(0, r))}, richieste ${F(req)}.\nBloccato fino alla prossima settimana.`
       : tipo === 'FERIE' ? `Ferie disponibili: ${F(Math.max(0, r))}, richieste ${F(req)}.\nIl riporto dell'anno scorso scade il 30 giugno.`
       : `Soglia annuale superata per ${tipo}: residuo ${F(Math.max(0, r))}, richieste ${F(req)}.\nBloccato fino al nuovo caricamento annuale.`
     );
@@ -1254,8 +1279,21 @@ function navHTML() { const ys = []; for (let y = primoAnno(); y <= new Date().ge
   return `<div class="nav2"><button class="ib" onclick="navMese(-1)" aria-label="Mese precedente">‹</button><select onchange="setNav(rie.y,this.value)">${MESI.map((m, i) => `<option value="${i + 1}" ${i + 1 === rie.m ? 'selected' : ''}>${cap(m)}</option>`).join('')}</select><select onchange="setNav(this.value,rie.m)">${ys.map(y => `<option ${y === rie.y ? 'selected' : ''}>${y}</option>`).join('')}</select><button class="ib" onclick="navMese(1)" aria-label="Mese successivo">›</button></div>`; }
 function datiMese(ym) {
   const y = ym.slice(0, 4), rp = ripartoAnno(y), p = pzAttivo(y), m = { lav: 0, giu: 0, ban: 0, pag: 0, nd: 0, tk: 0, gt: {}, festRip: [], att: {} };
-  giorniConDati().filter(d => d.startsWith(ym) && (!p || d > p.data)).forEach(d => { const r = calcDay(d), x = rp[d] || { ban: 0, pag: 0, nd: 0 }; m.lav += r.oreLavorateMin; m.giu += r.oreGiustificateMin; m.ban += x.ban; m.pag += x.pag; m.nd += x.nd; if (ticketGiorno(d)) m.tk++; });
-  S.g.filter(g => g.data.startsWith(ym) && (!p || g.data > p.data)).forEach(g => { const k = isRecupero(g.tipo) ? 'ORE RECUPERO' : g.tipo; m.gt[k] = (m.gt[k] || 0) + uso(g); });
+  giorniConDati().filter(d => d.startsWith(ym) && (!p || d > p.data)).forEach(d => {
+    const r = calcDay(d), x = rp[d] || { ban: 0, pag: 0, nd: 0 };
+    m.lav += r.oreLavorateMin;
+    m.giu += r.oreGiustificateMin;
+    m.ban += x.ban;
+    m.pag += x.pag;
+    m.nd += x.nd;
+    if (ticketGiorno(d)) m.tk++;
+    if (r.giustPerTipo) {
+      Object.entries(r.giustPerTipo).forEach(([tp, minVal]) => {
+        const k = isRecupero(tp) ? 'ORE RECUPERO' : tp;
+        m.gt[k] = (m.gt[k] || 0) + minVal;
+      });
+    }
+  });
   const rg = repGiorniMese(ym);
   m.sw = m.gt['SMART WORKING'] || 0; m.sc = m.gt['SCIOPERO'] || 0; m.mancate = mancateMese(ym);
   m.repGg1 = rg.gg1; m.repGg2 = rg.gg2; m.repMin = repMin(ym);
@@ -3611,33 +3649,33 @@ function trovaRigaExcelPerAttivita(catStr, cats) {
   return (fuzzy && fuzzy.excelRow) ? fuzzy : null;
 }
 
+// Regola Riga 5 (Excel Dirigenza): si distinguono solo FE (<ore>, sempre col numero) e MA (senza ore).
+// Festivi e giorni di riposo: sempre vuota. Smart working, pausa non timbrata e straordinario pausa: esclusi.
+// FE = somma esatta delle ore dei giustificativi a cartellino (FERIE, EX-FESTIVITA', ORE RECUPERO, ORE 4 NOVEMBRE,
+// VISITA MEDICA, CONGEDO PARENTALE, SCIOPERO e quota non compensata del PERMESSO NON RETRIBUITO).
 function formatAssenzaExcelGiorno(iso) {
+  const td = tipoGiorno(iso);
+  if (td.fest || td.rip) return '';
   const gList = gDay(iso);
   if (!gList.length) return '';
-
-  let malMin = 0;
+  if (gList.some(g => g.tipo === 'MALATTIA')) return 'MA';
+  const oreDov = isVen(iso) ? PARAMETRI.oreTeoricheVenerdi : PARAMETRI.oreTeoricheLunGio;
   let feMin = 0;
   gList.forEach(g => {
-    if (g.tipo === 'SMART WORKING' || g.tipo === 'PAUSA NON TIMBRATA' || g.tipo === 'STRAORDINARIO PAUSA' || g.tipo === 'SCIOPERO') return;
-    const m = uso(g);
-    if (g.tipo === 'MALATTIA') malMin += m;
-    else feMin += m; // FERIE, EX-FESTIVITÀ, ORE RECUPERO, ORE 4 NOVEMBRE, VISITA MEDICA -> FE nel modello dirigente
+    if (g.tipo === 'SMART WORKING' || g.tipo === 'PAUSA NON TIMBRATA' || g.tipo === 'STRAORDINARIO PAUSA' || g.tipo === 'PERMESSO NON RETRIBUITO') return;
+    let m = (g.tuttaGiornata && !g.durata) ? oreDov : uso(g);
+    if (g.tipo === 'SCIOPERO' && !m) m = oreDov;
+    if (g.tipo !== 'VISITA MEDICA' && m > 0 && m % 15 !== 0) m = Math.ceil(m / 15) * 15;
+    if (g.tipo === 'FERIE' && m > 0 && m < 30) m = 30;
+    feMin += m;
   });
-
-  const parts = [];
-  const fmtComma = mins => {
-    const q = Math.round((mins / 60) * 4) / 4;
-    return String(q).replace('.', ',');
-  };
-  const oreDov = isVen(iso) ? 360 : 480;
-
-  if (malMin > 0) {
-    parts.push(malMin >= oreDov ? 'MA' : `MA ${fmtComma(malMin)}`);
+  if (gList.some(g => g.tipo === 'PERMESSO NON RETRIBUITO')) {
+    const r = calcDay(iso);
+    if (r.permessoNonRetrNettoMin !== undefined) feMin += r.permessoNonRetrNettoMin;
+    else gList.filter(g => g.tipo === 'PERMESSO NON RETRIBUITO').forEach(g => { const m = uso(g); feMin += m > 0 ? Math.ceil(m / 15) * 15 : 0; });
   }
-  if (feMin > 0) {
-    parts.push(`FE ${fmtComma(feMin)}`);
-  }
-  return parts.join(' ');
+  if (feMin <= 0) return '';
+  return 'FE ' + String(Math.round((feMin / 60) * 100) / 100).replace('.', ',');
 }
 
 // Prepara un workbook completamente pulito e riadattato al calendario di un nuovo anno (es. 2027, 2028...)
@@ -3834,10 +3872,10 @@ async function recuperaModelloBaseBuffer() {
       fileName: custom.fileName || 'Modello personalizzato'
     };
   }
-  const res = await fetch('./modello_dirigenza.xlsx?v=4.40');
+  const res = await fetch('./modello_dirigenza.xlsx?v=4.42');
   if (!res.ok) throw new Error('Impossibile caricare modello_dirigenza.xlsx dal server.');
   const buf = await res.arrayBuffer();
-  return { buffer: buf, sig: 'builtin_dir_new_clean_v2', keepCompiled: false, fileName: 'DIR-NEW AGENDA (Ufficiale)' };
+  return { buffer: buf, sig: 'builtin_dir_new_clean_v3', keepCompiled: false, fileName: 'DIR-NEW AGENDA (Ufficiale)' };
 }
 
 async function esportaExcelDirigente(forzaRipartiPulito = false) {
@@ -3897,6 +3935,14 @@ async function esportaExcelDirigente(forzaRipartiPulito = false) {
     Object.keys(S.att || {}).forEach(iso => {
       if (iso.startsWith(`${anno}-`) && Array.isArray(S.att[iso]) && S.att[iso].length > 0) {
         const mNum = parseInt(iso.slice(5, 7), 10);
+        if (mNum >= 1 && mNum <= 12) mesiDaAggiornare.add(mNum);
+      }
+    });
+
+    // Aggiorna anche i mesi con soli giustificativi (es. ferie/malattie senza ore lavorate)
+    (S.g || []).forEach(g => {
+      if (g && g.data && g.data.startsWith(anno + '-')) {
+        const mNum = parseInt(g.data.slice(5, 7), 10);
         if (mNum >= 1 && mNum <= 12) mesiDaAggiornare.add(mNum);
       }
     });
@@ -3962,7 +4008,7 @@ async function esportaExcelDirigente(forzaRipartiPulito = false) {
             const sigAss = formatAssenzaExcelGiorno(iso);
             if (sigAss) {
               setXmlCellSharedString(sDoc, ssDoc, ssState, getOrCreateCellInRow(sDoc, r5, colL, 5), sigAss);
-            } else if (wasTouched || forzaRipartiPulito) {
+            } else if (!baseInfo.keepCompiled || m === meseCorrente || wasTouched || forzaRipartiPulito || tDay(iso).length > 0 || tipoGiorno(iso).fest) {
               clearXmlCellValue(getOrCreateCellInRow(sDoc, r5, colL, 5));
             }
           }
@@ -4003,6 +4049,12 @@ async function esportaExcelDirigente(forzaRipartiPulito = false) {
     if (s13File) {
       const s13Doc = parser.parseFromString(await s13File.async('string'), 'application/xml');
       const r13Map = buildSheetRowMap(s13Doc);
+      // Corregge eventuali formule duplicate (es. 'X'!AI42+'X'!AI42) nel Quadro Riassuntivo
+      const fEls = s13Doc.getElementsByTagNameNS(XLSX_MAIN_NS, 'f');
+      for (let i = 0; i < fEls.length; i++) {
+        const mm = /^('[^']+'![A-Z]+\d+)\+\1$/.exec((fEls[i].textContent || '').trim());
+        if (mm) fEls[i].textContent = mm[1];
+      }
       let grandYearTot = 0;
       const yearRowTots = {};
       const monthColSums = new Array(13).fill(0);
@@ -4269,12 +4321,15 @@ const DEFAULT_PARAMETRI = {
   oreTeoricheVenerdi: 6 * 60,        // 360 min
   scattoMinimoStraordinario: 30,
   scattoSuccessivoStraordinario: 15,
-  tettoBancaOre: 40 * 60             // 2400 min
+  tettoBancaOre: 40 * 60,            // 2400 min
+  santoPatrono: '06-24',             // S. Giovanni (Busto Arsizio), personalizzabile ('' = nessuno)
+  festiviExtra: ''                   // altri festivi ricorrenti 'MM-DD' separati da virgola
 };
 
 function applicaParametri() {
   const p = S.prm || {};
   PARAMETRI = Object.assign({}, DEFAULT_PARAMETRI, p);
+  festivi.c = {};
 }
 
 function caricaParametriOrario() {
@@ -4289,6 +4344,8 @@ function caricaParametriOrario() {
   if ($('paramTettoBanca')) $('paramTettoBanca').value = T(PARAMETRI.tettoBancaOre);
   if ($('paramScattoMin')) $('paramScattoMin').value = PARAMETRI.scattoMinimoStraordinario;
   if ($('paramScattoSucc')) $('paramScattoSucc').value = PARAMETRI.scattoSuccessivoStraordinario;
+  if ($('paramSantoPatrono')) $('paramSantoPatrono').value = fmtGiornoMeseIT(PARAMETRI.santoPatrono);
+  if ($('paramFestiviExtra')) $('paramFestiviExtra').value = String(PARAMETRI.festiviExtra || '').split(',').map(fmtGiornoMeseIT).filter(Boolean).join(', ');
 }
 
 function salvaParametriOrario() {
@@ -4302,6 +4359,11 @@ function salvaParametriOrario() {
   const tb = P($('paramTettoBanca').value);
   const smin = parseInt($('paramScattoMin').value, 10);
   const ssucc = parseInt($('paramScattoSucc').value, 10);
+  const sp = parseGiornoMeseRicorrente($('paramSantoPatrono') ? $('paramSantoPatrono').value : '');
+  if (sp === null) return alert('Santo Patrono non valido: usa il formato GG/MM (es. 24/06) oppure lascia vuoto per disattivarlo.');
+  const feRaw = ($('paramFestiviExtra') ? $('paramFestiviExtra').value : '').split(',').map(s => s.trim()).filter(Boolean);
+  const feConv = feRaw.map(parseGiornoMeseRicorrente);
+  if (feConv.some(x => !x)) return alert('Altri festivi non validi: usa il formato GG/MM separando le date con la virgola (es. 07/12, 15/09).');
 
   if (fi === null || ff === null || olg === null || ov === null || isNaN(pmin) || pfine === null || umin === null || tb === null || isNaN(smin) || isNaN(ssucc)) {
     return alert('Tutti i campi devono contenere valori validi.');
@@ -4318,7 +4380,9 @@ function salvaParametriOrario() {
       uscitaMinimaLunGio: umin,
       tettoBancaOre: tb,
       scattoMinimoStraordinario: smin,
-      scattoSuccessivoStraordinario: ssucc
+      scattoSuccessivoStraordinario: ssucc,
+      santoPatrono: sp,
+      festiviExtra: feConv.join(',')
     };
   });
   applicaParametri();
@@ -4624,4 +4688,73 @@ function renderVistaMeseGriglia(ym) {
 
   html += `</div>`;
   box.innerHTML = html;
+}
+
+
+// ==========================================
+// IMPORTAZIONE ATTIVITA' SVOLTE DA EXCEL DIRIGENZA COMPILATO (.xlsx)
+// ==========================================
+async function importaAttivitaDaExcelFile(event) {
+  const f = event.target.files && event.target.files[0];
+  if (!f) return;
+  try {
+    if (typeof JSZip === 'undefined') return alert('Libreria JSZip non ancora caricata.');
+    const zip = await JSZip.loadAsync(await f.arrayBuffer());
+    const ssF = zip.file('xl/sharedStrings.xml');
+    if (!ssF || !zip.file('xl/worksheets/sheet1.xml')) return alert('Il file selezionato non sembra un Excel dirigenza valido.');
+    const parser = new DOMParser();
+    const ssState = parseSharedStringsXml(parser.parseFromString(await ssF.async('string'), 'application/xml'));
+    const cats = getCategorieDirigente();
+    let anno = null;
+    const trovate = {};
+    for (let m = 1; m <= 12; m++) {
+      const sf = zip.file('xl/worksheets/sheet' + m + '.xml');
+      if (!sf) continue;
+      const sDoc = parser.parseFromString(await sf.async('string'), 'application/xml');
+      const rowMap = buildSheetRowMap(sDoc);
+      if (!anno) {
+        const r3 = rowMap.get(3);
+        const y = r3 ? readXmlCellNumeric(getOrCreateCellInRow(sDoc, r3, 'AI', 3)) : 0;
+        anno = (y >= 2020 && y <= 2100) ? y : rie.y;
+      }
+      for (let day = 1; day <= ultimoMese(anno, m); day++) {
+        const colL = colIdxToLetter(3 + day);
+        const iso = anno + '-' + String(m).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+        cats.forEach(cat => {
+          const rn = cat.excelRow;
+          const rEl = rn ? rowMap.get(rn) : null;
+          if (!rEl) return;
+          const v = readXmlCellNumeric(getOrCreateCellInRow(sDoc, rEl, colL, rn));
+          if (v > 0) {
+            let note = '';
+            if (cat.isAltro) {
+              note = readXmlCellText(getOrCreateCellInRow(sDoc, rEl, 'C', rn), ssState).replace(/^ALTRO\s*\(?SPECIFICARE\)?\s*:?\s*/i, '').trim();
+            }
+            (trovate[iso] = trovate[iso] || []).push({ cat: getCatKey(cat), ore: Math.round(v * 100) / 100, note });
+          }
+        });
+      }
+    }
+    const giorni = Object.keys(trovate).sort();
+    event.target.value = '';
+    if (!giorni.length) return alert('Nessuna attività svolta trovata nel file.');
+    const totOre = giorni.reduce((a, d) => a + trovate[d].reduce((x, y) => x + y.ore, 0), 0);
+    if (!confirm('Trovate attività in ' + giorni.length + ' giornate (' + giorni[0] + ' → ' + giorni[giorni.length - 1] + ', ' + totOre.toFixed(2) + ' ore).\nLe giornate che hanno già attività in app o appartengono a mesi verificati NON verranno toccate. Importare?')) return;
+    let nGg = 0, nVoci = 0, skipEs = 0, skipVer = 0;
+    mut(() => {
+      S.att = S.att || {};
+      S.exportedAttDays = S.exportedAttDays || {};
+      giorni.forEach(iso => {
+        if (S.ver[iso.slice(0, 7)]) { skipVer++; return; }
+        if ((S.att[iso] || []).length) { skipEs++; return; }
+        S.att[iso] = trovate[iso];
+        S.exportedAttDays[iso] = true;
+        nGg++;
+        nVoci += trovate[iso].length;
+      });
+    });
+    toast('Importate ' + nVoci + ' attività in ' + nGg + ' giornate' + (skipEs ? ' (' + skipEs + ' già presenti)' : '') + (skipVer ? ' (' + skipVer + ' in mesi verificati)' : '') + ' ✓');
+  } catch (err) {
+    alert('Errore durante l\'importazione dal file Excel: ' + err.message);
+  }
 }
