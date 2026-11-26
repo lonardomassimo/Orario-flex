@@ -41,7 +41,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 const CLIENT_WRITER_ID = 'w_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
-const CLOUD_VER = '4.57';
+const CLOUD_VER = '4.58';
 
 let currentUser = null;
 let unsubscribeSnapshot = null;
