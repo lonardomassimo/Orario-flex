@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.46', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.47', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {} });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -571,7 +571,35 @@ function renderReg(tG, gG, iso) {
     }).join('') : '<div class="empty">Nessun giustificativo</div>');
 }
 function eliminaTimb(i) { const t = S.t[i]; if (bloccato(t.data)) return; if (confirm(`Eliminare la timbratura ${t.tipo} delle ${t.ora}?`)) mut(() => S.t.splice(i, 1)); }
-function eliminaGiust(i) { const g = S.g[i]; if (bloccato(g.data)) return; if (confirm(`Eliminare il giustificativo ${g.tipo}?`)) mut(() => S.g.splice(i, 1)); }
+async function eliminaGiust(i) {
+  const g = S.g[i];
+  if (!g || bloccato(g.data)) return;
+  if (!confirm(`Eliminare il giustificativo ${g.tipo}?`)) return;
+  let hasGoogleDel = false;
+  mut(() => {
+    S.g.splice(i, 1);
+    if (g.tipo === 'SMART WORKING') {
+      const linked = S.ev.filter(e => (g.id && e.giustId === g.id) || (!g.id && e.data === g.data && e.titolo === '💻 Smart Working'));
+      if (linked.length) {
+        linked.forEach(ev => {
+          if (ev.googleId && isGoogleConfigured()) {
+            S.gcal = S.gcal || { connected: true, email: getGooglePrimaryEmail(), selectedCals: getGoogleSelectedCalendars(), calCache: [], dismissedIds: [], pendingDeletes: [] };
+            S.gcal.pendingDeletes = S.gcal.pendingDeletes || [];
+            if (!S.gcal.pendingDeletes.some(d => d.googleId === ev.googleId)) {
+              S.gcal.pendingDeletes.push({ googleId: ev.googleId, calId: ev.googleCalId || getWritableSelectedGoogleCalendars()[0] || 'primary' });
+              hasGoogleDel = true;
+            }
+          }
+        });
+        const linkedIds = new Set(linked.map(e => e.id));
+        S.ev = S.ev.filter(e => !linkedIds.has(e.id));
+      }
+    }
+  });
+  if (hasGoogleDel && isGoogleConfigured()) {
+    await eseguiPendingDeletesGoogle();
+  }
+}
 const cambiaGiorno = n => {
   const prevDate = iso0(currentDate);
   currentDate.setDate(currentDate.getDate() + n);
@@ -877,7 +905,12 @@ async function delEv(id) {
   });
 
   if (gId && isGoogleConfigured()) {
-    await eseguiPendingDeletesGoogle();
+    const okDel = await eseguiPendingDeletesGoogle();
+    if (okDel) {
+      toast('Impegno eliminato anche da Google Calendar ✓');
+    } else if (!isGoogleTokenValid()) {
+      toast('Impegno rimosso in app: rinnova Google per completare la cancellazione sul calendario.');
+    }
   }
 }
 function renderAttivita(iso) { const l = S.att[iso] || []; $('attList').innerHTML = l.length ? l.map((a, i) => `<div class="tl"><span class="nm"><b>${a.cat}</b>${a.note ? `<br><small>${a.note}</small>` : ''}</span><button class="ib d" onclick="delAtt(${i})" aria-label="Elimina">${IC.bin}</button></div>`).join('') : '<div class="empty">Nessuna attività registrata</div>'; }
@@ -1168,7 +1201,14 @@ function aggiornaFormGiust() {
   }
 }
 
-function salvaGiustificativo() {
+function smartWorkingOrarioEv(g) {
+  if (!g.tuttaGiornata && g.oraInizio && g.oraFine) {
+    return { ora: g.oraInizio, oraFine: g.oraFine };
+  }
+  return { ora: '09:00', oraFine: isVen(g.data) ? '15:00' : '17:30' };
+}
+
+async function salvaGiustificativo() {
   const tipo = $('selTipoGiust').value, iso = iso0(currentDate), n = { data: iso, tipo };
   if (bloccato(iso)) return;
 
@@ -1229,15 +1269,89 @@ function salvaGiustificativo() {
     );
   }
 
+  const prevG = (editGiustIdx !== null && S.g[editGiustIdx]) ? { ...S.g[editGiustIdx] } : null;
+  let swEvToSync = null;
+  let swNeedsDelete = false;
+  const chosenCal = getWritableSelectedGoogleCalendars()[0] || 'primary';
+  const cache = (S.gcal && S.gcal.calCache) || [];
+  const calMeta = cache.find(c => c.id === chosenCal) || {};
+
   mut(() => {
+    if (n.tipo === 'SMART WORKING') {
+      n.id = (prevG && prevG.id) || uid();
+    }
     if (editGiustIdx !== null && S.g[editGiustIdx]) {
       S.g[editGiustIdx] = n;
     } else {
       S.g.push(n);
     }
+
+    if (n.tipo === 'SMART WORKING') {
+      const { ora, oraFine } = smartWorkingOrarioEv(n);
+      let ev = S.ev.find(e => e.giustId === n.id || (prevG && prevG.id && e.giustId === prevG.id));
+      if (ev) {
+        ev.giustId = n.id;
+        ev.data = n.data;
+        ev.dataFine = n.data;
+        ev.ora = ora;
+        ev.oraFine = oraFine;
+        ev.titolo = '💻 Smart Working';
+        if (isGoogleConfigured() && ev.syncGoogle !== false) {
+          ev.googleCalId = ev.googleCalId || chosenCal;
+          ev.pendingSync = ev.googleId ? 'update' : 'create';
+        }
+      } else {
+        ev = {
+          id: uid(),
+          giustId: n.id,
+          data: n.data,
+          dataFine: n.data,
+          ora,
+          oraFine,
+          titolo: '💻 Smart Working',
+          luogo: '',
+          tipo: 'Lavoro',
+          fuori: false,
+          reminder: -1,
+          concluso: false,
+          syncGoogle: true
+        };
+        if (isGoogleConfigured()) {
+          ev.googleCalId = chosenCal;
+          ev.googleCalName = calMeta.summary || '';
+          ev.googleCalColor = calMeta.backgroundColor || '#4285F4';
+          ev.pendingSync = 'create';
+        }
+        S.ev.push(ev);
+      }
+      swEvToSync = ev;
+    } else if (prevG && prevG.tipo === 'SMART WORKING') {
+      const linked = S.ev.filter(e => (prevG.id && e.giustId === prevG.id) || (!prevG.id && e.data === prevG.data && e.titolo === '💻 Smart Working'));
+      if (linked.length) {
+        linked.forEach(ev => {
+          if (ev.googleId && isGoogleConfigured()) {
+            S.gcal = S.gcal || { connected: true, email: getGooglePrimaryEmail(), selectedCals: getGoogleSelectedCalendars(), calCache: [], dismissedIds: [], pendingDeletes: [] };
+            S.gcal.pendingDeletes = S.gcal.pendingDeletes || [];
+            if (!S.gcal.pendingDeletes.some(d => d.googleId === ev.googleId)) {
+              S.gcal.pendingDeletes.push({ googleId: ev.googleId, calId: ev.googleCalId || chosenCal });
+              swNeedsDelete = true;
+            }
+          }
+        });
+        const linkedIds = new Set(linked.map(e => e.id));
+        S.ev = S.ev.filter(e => !linkedIds.has(e.id));
+      }
+    }
   });
   editGiustIdx = null;
   chiudiModal('modalGiust');
+
+  if (swEvToSync && isGoogleConfigured()) {
+    if (swEvToSync.googleId) await aggiornaEventoGoogle(swEvToSync);
+    else await inviaEventoGoogle(swEvToSync);
+  } else if (swNeedsDelete && isGoogleConfigured()) {
+    await eseguiPendingDeletesGoogle();
+  }
 }
 
 // ---------- Storico ----------
@@ -1630,33 +1744,46 @@ function allineaImpegniReperibilita() {
   S.rep.forEach(r => {
     if (!r.id) { r.id = uid(); changed = true; }
     if (!r.cat) { r.cat = '1SQ'; changed = true; }
-    // Se il periodo non è ancora mai stato collegato ad un impegno in Agenda, crealo
-    if (!r.evId && !r.evLinked) {
-      const evEsistente = S.ev.find(e => e.repId === r.id || (e.data === r.da && evFine(e) === r.a && /Reperibilit|Rincalzo/i.test(e.titolo || '')));
-      if (evEsistente) {
-        r.evId = evEsistente.id;
-        evEsistente.repId = r.id;
+    const titoloAtteso = repTitoloAgenda(repCat(r));
+    let ev = S.ev.find(e => (r.evId && e.id === r.evId) || e.repId === r.id);
+    if (!ev && !r.evLinked) {
+      ev = S.ev.find(e => e.data === r.da && evFine(e) === r.a && /Reperibilit|Rincalzo/i.test(e.titolo || ''));
+    }
+    if (ev) {
+      if (r.evId !== ev.id || ev.repId !== r.id || !r.evLinked) {
+        r.evId = ev.id;
+        ev.repId = r.id;
         r.evLinked = true;
-      } else {
-        const newEvId = uid();
-        S.ev.push({
-          id: newEvId,
-          repId: r.id,
-          data: r.da,
-          dataFine: r.a,
-          ora: '',
-          oraFine: '',
-          titolo: repTitoloAgenda(repCat(r)),
-          luogo: '',
-          tipo: 'Lavoro',
-          fuori: false,
-          reminder: -1,
-          concluso: false,
-          syncGoogle: true
-        });
-        r.evId = newEvId;
-        r.evLinked = true;
+        changed = true;
       }
+      if (ev.data !== r.da || evFine(ev) !== r.a || ev.ora !== '08:00' || ev.oraFine !== '08:00' || ev.titolo !== titoloAtteso) {
+        ev.data = r.da;
+        ev.dataFine = r.a;
+        ev.ora = '08:00';
+        ev.oraFine = '08:00';
+        ev.titolo = titoloAtteso;
+        if (ev.googleId && ev.syncGoogle !== false) ev.pendingSync = 'update';
+        changed = true;
+      }
+    } else if (!r.evLinked) {
+      const newEvId = uid();
+      S.ev.push({
+        id: newEvId,
+        repId: r.id,
+        data: r.da,
+        dataFine: r.a,
+        ora: '08:00',
+        oraFine: '08:00',
+        titolo: titoloAtteso,
+        luogo: '',
+        tipo: 'Lavoro',
+        fuori: false,
+        reminder: -1,
+        concluso: false,
+        syncGoogle: true
+      });
+      r.evId = newEvId;
+      r.evLinked = true;
       changed = true;
     }
   });
@@ -1757,6 +1884,8 @@ async function addRep() {
         if (linkedEv) {
           linkedEv.data = da;
           linkedEv.dataFine = a;
+          linkedEv.ora = '08:00';
+          linkedEv.oraFine = '08:00';
           linkedEv.titolo = titoloEv;
           if (isGoogleConfigured()) {
             linkedEv.googleCalId = linkedEv.googleCalId || chosenCal;
@@ -1769,8 +1898,8 @@ async function addRep() {
             repId: existingRep.id,
             data: da,
             dataFine: a,
-            ora: '',
-            oraFine: '',
+            ora: '08:00',
+            oraFine: '08:00',
             titolo: titoloEv,
             luogo: '',
             tipo: 'Lavoro',
@@ -1806,8 +1935,8 @@ async function addRep() {
     repId: repId,
     data: da,
     dataFine: a,
-    ora: '',
-    oraFine: '',
+    ora: '08:00',
+    oraFine: '08:00',
     titolo: titoloEv,
     luogo: '',
     tipo: 'Lavoro',
