@@ -40,7 +40,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 const CLIENT_WRITER_ID = 'w_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
-const CLOUD_VER = '4.6';
+const CLOUD_VER = '4.53';
 
 let currentUser = null;
 let unsubscribeSnapshot = null;
@@ -48,6 +48,9 @@ let syncDebounceTimer = null;
 let cloudEmailMode = 'login';
 let readyResolved = false;
 let readyResolve = null;
+let cloudHydrated = false;
+let lastAppliedCloudMs = 0;
+let lastKnownRecordCount = 0;
 
 const readyPromise = new Promise(resolve => {
   readyResolve = () => {
@@ -86,12 +89,19 @@ function hasLocalUserData() {
   );
 }
 
+function countRecords(s) {
+  if (!s) return 0;
+  return (Array.isArray(s.t) ? s.t.length : 0) +
+    (Array.isArray(s.g) ? s.g.length : 0) +
+    (s.att ? Object.keys(s.att).length : 0);
+}
+
 function getLocalUpdatedMs() {
-  return +(localStorage.getItem('cf_local_updated_ms') || 0);
+  return lastAppliedCloudMs;
 }
 
 function setLocalUpdatedMs(ms) {
-  localStorage.setItem('cf_local_updated_ms', String(ms));
+  lastAppliedCloudMs = Number(ms) || 0;
 }
 
 function nowTimeStr() {
@@ -120,7 +130,7 @@ function traduciErroreFirebase(err) {
     case 'auth/too-many-requests':
       return 'Troppi tentativi ravvicinati: attendi qualche minuto e riprova.';
     case 'auth/network-request-failed':
-      return 'Connessione Internet assente: i dati restano salvati in locale.';
+      return 'Connessione Internet assente: i dati risiedono solo su Cloud Firebase, riprova quando torni online.';
     case 'permission-denied':
       return 'Permesso negato dal Cloud: verifica di aver effettuato l’accesso con il tuo account.';
     default:
@@ -166,7 +176,7 @@ function aggiornaUIStatoSync() {
     if (boxOut) boxOut.style.display = 'block';
     if (boxIn) boxIn.style.display = 'none';
     const subEl = el('syncStatusSub');
-    if (subEl) subEl.textContent = 'Non collegato (solo memoria locale)';
+    if (subEl) subEl.textContent = 'Non collegato — accedi al Cloud Firebase';
   }
 }
 
@@ -279,9 +289,22 @@ async function syncInviaDatiCloud(silenzioso = false) {
     }
     return false;
   }
+  if (!cloudHydrated) {
+    if (!silenzioso) showToast('Attendi il caricamento iniziale dal Cloud prima di salvare.');
+    return false;
+  }
   try {
+    const stateObj = getStateObj();
+    const newCount = countRecords(stateObj);
+    if (lastKnownRecordCount > 30 && newCount < Math.floor(lastKnownRecordCount * 0.5) && !window.__cfAllowShrinkWrite) {
+      console.warn(`Protezione Cloud: blocco invio riduttivo (${newCount} vs ${lastKnownRecordCount} record).`);
+      showToast('Protezione Cloud attiva: ripristino lo stato aggiornato dal Cloud.');
+      await syncScaricaDatiCloud(false);
+      return false;
+    }
+
     const nowMs = Math.max(Date.now(), getLocalUpdatedMs() || Date.now());
-    const stateJson = JSON.stringify(getStateObj());
+    const stateJson = JSON.stringify(stateObj);
     if (stateJson.length > 940000) {
       if (!silenzioso) alert('Attenzione: archivio troppo grande per un singolo documento Cloud.');
       return false;
@@ -297,7 +320,9 @@ async function syncInviaDatiCloud(silenzioso = false) {
       stateJson
     });
 
+    window.__cfAllowShrinkWrite = false;
     setLocalUpdatedMs(nowMs);
+    lastKnownRecordCount = newCount;
     localStorage.setItem('cf_last_cloud_sync', nowTimeStr());
     aggiornaUIStatoSync();
     if (!silenzioso) showToast('Dati salvati sul tuo Cloud privato! ✓');
@@ -335,9 +360,10 @@ async function syncScaricaDatiCloud(chiediConferma = false) {
     const snap = await getDoc(docRef);
 
     if (!snap.exists()) {
+      cloudHydrated = true;
       if (hasLocalUserData()) {
         await syncInviaDatiCloud(true);
-        if (chiediConferma) showToast('Dati locali caricati per la prima volta nel tuo Cloud! ✓');
+        if (chiediConferma) showToast('Dati caricati per la prima volta nel tuo Cloud! ✓');
       } else if (chiediConferma) {
         showToast('Nessun dato presente ancora sul Cloud per questo account.');
       }
@@ -345,19 +371,22 @@ async function syncScaricaDatiCloud(chiediConferma = false) {
     }
 
     const data = snap.data();
-    if (!data || !data.stateJson) return false;
+    if (!data || !data.stateJson) {
+      cloudHydrated = true;
+      return false;
+    }
     const remoteState = JSON.parse(data.stateJson);
     const remoteMs = Number(data.updatedAtMs) || 0;
-    const localMs = getLocalUpdatedMs();
 
     if (remoteState && remoteState._initialAttSeed === true) {
       if (hasLocalUserData()) {
         const merged = mergeSeedRemote(remoteState);
+        cloudHydrated = true;
         if (typeof window.__cfApplyCloudState === 'function') window.__cfApplyCloudState(merged, Date.now());
         await syncInviaDatiCloud(true);
         localStorage.setItem('cf_last_cloud_sync', nowTimeStr());
         aggiornaUIStatoSync();
-        if (chiediConferma) showToast('Attività importate dal Cloud e unite ai tuoi dati locali! ✓');
+        if (chiediConferma) showToast('Attività importate dal Cloud e unite ai tuoi dati! ✓');
         return true;
       }
       delete remoteState._initialAttSeed;
@@ -368,22 +397,22 @@ async function syncScaricaDatiCloud(chiediConferma = false) {
       const locCount = (sLoc.t ? sLoc.t.length : 0) + (sLoc.g ? sLoc.g.length : 0);
       const remCount = (remoteState.t ? remoteState.t.length : 0) + (remoteState.g ? remoteState.g.length : 0);
       if (locCount > 0 && remCount !== locCount) {
-        if (!confirm(`Trovate ${remCount} registrazioni nel Cloud (attuali sul dispositivo: ${locCount}). Vuoi scaricarle e applicarle?`)) {
+        if (!confirm(`Trovate ${remCount} registrazioni nel Cloud (attuali nella vista: ${locCount}). Vuoi scaricarle e applicarle?`)) {
           return false;
         }
       }
     }
 
-    if (chiediConferma || !hasLocalUserData() || remoteMs > localMs) {
-      if (typeof window.__cfApplyCloudState === 'function') {
-        window.__cfApplyCloudState(remoteState, remoteMs || Date.now());
-      }
-      localStorage.setItem('cf_last_cloud_sync', nowTimeStr());
-      aggiornaUIStatoSync();
-      if (chiediConferma) showToast('Dati sincronizzati dal Cloud! ✓');
-    } else if (localMs > remoteMs && hasLocalUserData()) {
-      await syncInviaDatiCloud(true);
+    // Cloud vince sempre: applica integralmente lo stato Firestore
+    if (typeof window.__cfApplyCloudState === 'function') {
+      window.__cfApplyCloudState(remoteState, remoteMs || Date.now());
     }
+    setLocalUpdatedMs(remoteMs || Date.now());
+    lastKnownRecordCount = countRecords(remoteState);
+    cloudHydrated = true;
+    localStorage.setItem('cf_last_cloud_sync', nowTimeStr());
+    aggiornaUIStatoSync();
+    if (chiediConferma) showToast('Dati sincronizzati dal Cloud! ✓');
     return true;
   } catch (err) {
     console.warn('Errore download Cloud Firestore:', err);
@@ -398,8 +427,14 @@ function syncForzaSubito() {
 }
 
 function triggerAutoSyncCloud() {
-  setLocalUpdatedMs(Date.now());
-  if (!currentUser) return;
+  if (!currentUser) {
+    showToast('Accedi al Cloud Firebase per salvare le modifiche.');
+    return;
+  }
+  if (!cloudHydrated) {
+    showToast('Attendi il caricamento iniziale dal Cloud prima di salvare.');
+    return;
+  }
   clearTimeout(syncDebounceTimer);
   syncDebounceTimer = setTimeout(() => {
     syncDebounceTimer = null;
@@ -419,13 +454,15 @@ function attivaListenerRealtime(user) {
     if (!data || !data.stateJson || data.writerId === CLIENT_WRITER_ID) return;
     if (data.stateJson.indexOf('"_initialAttSeed":true') !== -1) return;
     const remoteMs = Number(data.updatedAtMs) || 0;
-    const localMs = getLocalUpdatedMs();
-    if (remoteMs > localMs) {
+    if (remoteMs >= lastAppliedCloudMs) {
       try {
         const remoteState = JSON.parse(data.stateJson);
         if (typeof window.__cfApplyCloudState === 'function') {
           window.__cfApplyCloudState(remoteState, remoteMs);
         }
+        setLocalUpdatedMs(remoteMs);
+        lastKnownRecordCount = countRecords(remoteState);
+        cloudHydrated = true;
         localStorage.setItem('cf_last_cloud_sync', nowTimeStr());
         aggiornaUIStatoSync();
       } catch (e) {
@@ -450,14 +487,22 @@ onAuthStateChanged(auth, async user => {
 
   if (!user) {
     currentUser = null;
+    cloudHydrated = false;
+    lastAppliedCloudMs = 0;
+    lastKnownRecordCount = 0;
+    if (typeof window.__cfResetLocalState === 'function') {
+      window.__cfResetLocalState();
+    }
     aggiornaUIStatoSync();
     readyResolve();
     return;
   }
 
   currentUser = user;
-  const prevUid = localStorage.getItem('cf_cloud_last_uid');
-  if (prevUid && prevUid !== user.uid && typeof window.__cfResetLocalState === 'function') {
+  cloudHydrated = false;
+  lastAppliedCloudMs = 0;
+  lastKnownRecordCount = 0;
+  if (typeof window.__cfResetLocalState === 'function') {
     window.__cfResetLocalState();
   }
   localStorage.setItem('cf_cloud_last_uid', user.uid);
