@@ -9,6 +9,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
+  signInWithCredential,
   getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -40,7 +41,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 const CLIENT_WRITER_ID = 'w_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
-const CLOUD_VER = '4.53';
+const CLOUD_VER = '4.54';
 
 let currentUser = null;
 let unsubscribeSnapshot = null;
@@ -218,6 +219,19 @@ async function cloudLoginGoogle() {
       }
     }
     setAuthErrorMsg(traduciErroreFirebase(err));
+  }
+}
+
+async function loginWithGoogleIdToken(idToken) {
+  setAuthErrorMsg('');
+  try {
+    const cred = GoogleAuthProvider.credential(idToken);
+    await signInWithCredential(auth, cred);
+    showToast('Accesso Google completato! Sincronizzazione attiva ✓');
+    return true;
+  } catch (err) {
+    setAuthErrorMsg(traduciErroreFirebase(err));
+    return false;
   }
 }
 
@@ -525,6 +539,7 @@ window.cloudSubmitEmailForm = cloudSubmitEmailForm;
 window.cloudSwitchEmailTab = cloudSwitchEmailTab;
 window.cloudResetPassword = cloudResetPassword;
 window.cloudLogout = cloudLogout;
+window.__cfLoginWithGoogleIdToken = loginWithGoogleIdToken;
 window.CF_CLOUD = {
   readyPromise,
   isDebouncePending: () => !!syncDebounceTimer,
