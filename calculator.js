@@ -169,6 +169,10 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
       if (!g.tuttaGiornata && dur > 0 && dur % 15 !== 0 && g.tipo !== 'VISITA MEDICA') {
         dur = Math.ceil(dur / 15) * 15;
       }
+      // Tetto rigido 4h (240 min) per Smart Working di mezza giornata
+      if (g.tipo === 'SMART WORKING' && !g.tuttaGiornata && dur > 240) {
+        dur = 240;
+      }
 
       const totG = dur + tPrima + tDopo;
       oreGiustificateMin += totG;
@@ -192,6 +196,14 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   }
 
   const oreAssenzaGiustificataMin = Math.max(0, oreGiustificateMin - smartWorkingMin);
+
+  const swGiusts = giustificativiGiorno.filter(g => g.tipo === 'SMART WORKING');
+  const swFullDay = swGiusts.some(g => g.tuttaGiornata);
+  const isSwMattina = !swFullDay && smartWorkingMin > 0 && (
+    swGiusts.some(g => { const ini = parseTimeToMinutes(g.oraInizio); return ini !== null && ini < (12 * 60 + 15); }) ||
+    (entrataNormMin !== null && entrataNormMin >= (12 * 60 + 15))
+  );
+  const isSwPomeriggio = !swFullDay && smartWorkingMin > 0 && !isSwMattina;
 
   // 5. Pausa Effettiva / In corso
   const hasStraordPausa = giustificativiGiorno.some(g => g.tipo === 'STRAORDINARIO PAUSA');
@@ -227,8 +239,8 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
     const gVisita = giustificativiGiorno.find(g => g.tipo === 'VISITA MEDICA');
     const finVisita = gVisita ? (parseTimeToMinutes(gVisita.oraFine) || (uscitaIntermediaMin + 75)) : (uscitaIntermediaMin + 75);
     pausaEffettivaMin = Math.max(PARAMETRI.pausaMinimaMinuti, Math.max(0, finePausaMin - finVisita));
-  } else if (hasSmartWorking && ultimaUscitaMin !== null && inizioPausaMin === null && finePausaMin === null) {
-    // Giornata mista Ufficio + Smart Working pomeridiano: la pausa di 30 min è già gestita tra le due modalità
+  } else if ((isSwPomeriggio || isSwMattina) && inizioPausaMin === null && finePausaMin === null) {
+    // Giornata mista Ufficio + Smart Working (mattina o pomeriggio): la pausa di 30 min è gestita tra le due modalità
     pausaEffettivaMin = 0;
   } else {
     if (inizioPausaMin !== null && finePausaNormMin !== null) {
@@ -269,6 +281,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   let orarioFine8hConPausaMin = null;
   let anticipoRispettoPalettoMin = 0;
   let oraScatto30m = null, oraScatto45m = null, oraScatto60m = null;
+  let swPomeriggioInizioPrevisto = null, swPomeriggioFinePrevista = null;
 
   if (entrataNormMin !== null) {
     const baseCalcolo = Math.min(PARAMETRI.fasciaIngressoFine, entrataNormMin);
@@ -276,6 +289,15 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
 
     if (isVenerdi || isWeekend) {
       uscitaTeoricaMin = entrataNormMin + oreLavoroNecessarie;
+      oraScatto30m = uscitaTeoricaMin + 30;
+      oraScatto45m = uscitaTeoricaMin + 45;
+      oraScatto60m = uscitaTeoricaMin + 60;
+    } else if (isSwPomeriggio) {
+      orarioFine8hConPausaMin = baseCalcolo + oreLavoroNecessarie + PARAMETRI.pausaMinimaMinuti;
+      pausaMassimaPerUscitaMinima = PARAMETRI.pausaMinimaMinuti;
+      uscitaTeoricaMin = entrataNormMin + oreLavoroNecessarie;
+      swPomeriggioInizioPrevisto = uscitaTeoricaMin + PARAMETRI.pausaMinimaMinuti;
+      swPomeriggioFinePrevista = swPomeriggioInizioPrevisto + smartWorkingMin;
       oraScatto30m = uscitaTeoricaMin + 30;
       oraScatto45m = uscitaTeoricaMin + 45;
       oraScatto60m = uscitaTeoricaMin + 60;
@@ -368,8 +390,8 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
         oreLavorateMin = lavoroGrezzoMin;
         uscitaConteggiataMin = ultimaUscitaMin;
       }
-    } else if (hasSmartWorking && ultimaUscitaMin !== null) {
-      // Giornata mista Ufficio + Smart Working pomeridiano:
+    } else if ((swFullDay || isSwPomeriggio) && ultimaUscitaMin !== null) {
+      // Giornata mista Ufficio + Smart Working pomeridiano (o SW intera giornata):
       // Inaz calcola le ore lavorate in sede direttamente dall'orario di uscita normalizzato
       // e assegna la quota residua allo smart working (al netto della pausa obbligatoria di 30 min)
       const lavSedeGrezzo = Math.max(0, ultimaUscitaMin - entrataNormMin);
@@ -597,6 +619,10 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
     giustPerTipo,
     oreGiustificateMin,
     smartWorkingMin,
+    isSwMattina,
+    isSwPomeriggio,
+    swPomeriggioInizioPrevisto: formatMinutesToTime(swPomeriggioInizioPrevisto),
+    swPomeriggioFinePrevista: formatMinutesToTime(swPomeriggioFinePrevista),
     oreAssenzaGiustificataMin,
     oreTotaliSvolteMin,
     straordinarioNettoMin,
