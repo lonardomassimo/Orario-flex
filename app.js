@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.50', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.51', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -1581,10 +1581,11 @@ function setNav(y, m) { rie.y = +y; rie.m = +m; refresh(); }
 function navHTML() { const ys = []; for (let y = primoAnno(); y <= new Date().getFullYear() + 1; y++) ys.push(y);
   return `<div class="nav2"><button class="ib" onclick="navMese(-1)" aria-label="Mese precedente">‹</button><select onchange="setNav(rie.y,this.value)">${MESI.map((m, i) => `<option value="${i + 1}" ${i + 1 === rie.m ? 'selected' : ''}>${cap(m)}</option>`).join('')}</select><select onchange="setNav(this.value,rie.m)">${ys.map(y => `<option ${y === rie.y ? 'selected' : ''}>${y}</option>`).join('')}</select><button class="ib" onclick="navMese(1)" aria-label="Mese successivo">›</button></div>`; }
 function datiMese(ym) {
-  const y = ym.slice(0, 4), rp = ripartoAnno(y), p = pzAttivo(y), m = { lav: 0, giu: 0, ban: 0, pag: 0, nd: 0, tk: 0, gt: {}, festRip: [], att: {} };
+  const y = ym.slice(0, 4), rp = ripartoAnno(y), p = pzAttivo(y), m = { lav: 0, ord: 0, giu: 0, ban: 0, pag: 0, nd: 0, tk: 0, gt: {}, festRip: [], att: {} };
   giorniConDati().filter(d => d.startsWith(ym) && (!p || d > p.data)).forEach(d => {
     const r = calcDay(d), x = rp[d] || { ban: 0, pag: 0, nd: 0 };
     m.lav += r.oreLavorateMin;
+    m.ord += r.oreOrdinarieMin;
     m.giu += r.oreGiustificateMin;
     m.ban += x.ban;
     m.pag += x.pag;
@@ -1608,7 +1609,7 @@ function datiMese(ym) {
 const R = (a, b, w) => `<div class="row"><span>${a}</span><b${w ? ' style="color:var(--danger)"' : ''}>${b}</b></div>`;
 function righeMese(m) {
   const ob = Math.max(0, m.mancate.length - 1);
-  return R('Ore lavorate in sede', F(m.lav)) + R('Smart working', F(m.sw)) + R('Ore giustificate', F(m.giu - m.sw - m.sc)) + R('Sciopero (non retribuito)', F(m.sc)) + R('Straordinario in monte ore', F(m.ban)) + R('Straordinario in pagamento', F(m.pag)) + (m.nd ? R('Straordinario da assegnare', F(m.nd), 1) : '') + R('Ticket maturati', m.tk)
+  return R('Ore ordinarie (INAZ ORD)', F(m.ord)) + R('Ore lavorate in sede (effettive)', F(m.lav)) + R('Smart working', F(m.sw)) + R('Ore giustificate', F(m.giu - m.sw - m.sc)) + R('Sciopero (non retribuito)', F(m.sc)) + R('Straordinario in monte ore', F(m.ban)) + R('Straordinario in pagamento', F(m.pag)) + (m.nd ? R('Straordinario da assegnare', F(m.nd), 1) : '') + R('Ticket maturati', m.tk)
     + R('Mancate timbrature', `${m.mancate.length}${ob ? ` (${ob} oltre il limite)` : ''}`, ob)
     + R('Giorni reperibilità 1° squadra', `${m.repGg1} gg`)
     + R('Giorni rincalzo 2° squadra', `${m.repGg2} gg`)
