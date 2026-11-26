@@ -466,7 +466,8 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   }
 
   const oreTotaliSvolteMin = oreLavorateMin + oreGiustificateMin;
-  const oreOrdinarieMin = Math.min(targetOrdinarioGiorno, oreTotaliSvolteMin);
+  // Allineato a INAZ (voce ORD): sole ore ordinarie lavorate in presenza, esclusi i giustificativi retribuiti e gli straordinari
+  const oreOrdinarieMin = Math.max(0, Math.min(targetOrdinarioGiorno, oreTotaliSvolteMin) - oreGiustificateMin);
 
   // 9. Calcolo Straordinario ed eliminazione doppio addebito ritardo pausa
   const uscitaPrimaPalettoLunGio = (!isVenerdi && !isWeekend && ultimaUscitaMin !== null && ultimaUscitaMin < PARAMETRI.uscitaMinimaLunGio);
