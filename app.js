@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.47', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.48', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {} });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -4194,6 +4194,17 @@ function ricalcolaCacheFormuleMeseXml(sDoc, rowMap) {
   return { rowTotals, grandTotal };
 }
 
+async function rimuoviGialloStylesXml(zip) {
+  const stFile = zip.file('xl/styles.xml');
+  if (!stFile) return;
+  let stTxt = await stFile.async('string');
+  if (!/FFFF00/i.test(stTxt)) return;
+  stTxt = stTxt
+    .replace(/<fgColor\s+rgb="FFFFFF00"\s*\/>\s*<bgColor\s+rgb="(FF[0-9A-Fa-f]{6})"\s*\/>/gi, '<fgColor rgb="$1" /><bgColor rgb="$1" />')
+    .replace(/<fgColor\s+rgb="FFFFFF00"\s*\/>/gi, '<fgColor rgb="FFF0F5FA" />');
+  zip.file('xl/styles.xml', stTxt);
+}
+
 async function recuperaModelloBaseBuffer() {
   const custom = await excelIdbGet('custom_template');
   if (custom && custom.buffer) {
@@ -4204,10 +4215,10 @@ async function recuperaModelloBaseBuffer() {
       fileName: custom.fileName || 'Modello personalizzato'
     };
   }
-  const res = await fetch('./modello_dirigenza.xlsx?v=4.42');
+  const res = await fetch('./modello_dirigenza.xlsx?v=4.48');
   if (!res.ok) throw new Error('Impossibile caricare modello_dirigenza.xlsx dal server.');
   const buf = await res.arrayBuffer();
-  return { buffer: buf, sig: 'builtin_dir_new_clean_v3', keepCompiled: false, fileName: 'DIR-NEW AGENDA (Ufficiale)' };
+  return { buffer: buf, sig: 'builtin_dir_new_clean_v4', keepCompiled: false, fileName: 'DIR-NEW AGENDA (Ufficiale)' };
 }
 
 async function esportaExcelDirigente(forzaRipartiPulito = false) {
@@ -4233,6 +4244,7 @@ async function esportaExcelDirigente(forzaRipartiPulito = false) {
       zip = await JSZip.loadAsync(baseInfo.buffer);
       isFreshInit = true;
     }
+    await rimuoviGialloStylesXml(zip);
 
     const ssFile = zip.file('xl/sharedStrings.xml');
     if (!ssFile) throw new Error('Il modello Excel selezionato non contiene sharedStrings.xml valido.');
