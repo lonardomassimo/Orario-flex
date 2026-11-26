@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.45', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.46', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {} });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -268,7 +268,13 @@ function repGiorniAnno(y) {
   }
   return { gg1, gg2, tot: gg1 + gg2 };
 }
-const durMin = g => g.durata ? (P(g.durata) || 0) : Math.max(0, (P(g.oraFine) || 0) - (P(g.oraInizio) || 0));
+const durMin = g => {
+  let m = g.durata ? (P(g.durata) || 0) : Math.max(0, (P(g.oraFine) || 0) - (P(g.oraInizio) || 0));
+  if (!g.tuttaGiornata && m > 0 && m % 15 !== 0 && g.tipo !== 'VISITA MEDICA' && g.tipo !== 'SMART WORKING') {
+    m = Math.ceil(m / 15) * 15;
+  }
+  return m;
+};
 const uso = g => durMin(g) + (P(g.tragittoPrima) || 0) + (P(g.tragittoDopo) || 0);
 const pzAttivo = y => S.pz && S.pz.data && S.pz.data.slice(0, 4) === String(y) ? S.pz : null;
 const primoAnno = () => Math.min(+todayISO().slice(0, 4), ...giorniConDati().map(d => +d.slice(0, 4)), S.pz ? +S.pz.data.slice(0, 4) : 9999);
@@ -499,7 +505,7 @@ function aggiornaSchermataOggi() {
     }
   }
   else if (f === 'mat') h = `<div class="tag">Mattina · entrata ${c.entrataNorm}</div><div class="grid2">${big('Pausa massima', F(P(c.pausaMassimaPerUscitaMinima)), 'per uscire alle 17:15')}${big('Uscita minima', c.uscitaTeorica, 'con pausa di 30 min')}</div>${pills(c)}${c.anticipoRispettoPalettoMin > 0 ? `<div class="sub">Con la pausa minima finisci le ore ${c.anticipoRispettoPalettoMin} min prima delle 17:15</div>` : ''}`;
-  else if (f === 'pausa') { const { mn, mx } = rientri(c); h = `<div class="tag">In pausa dalle ${c.inizioPausa}</div><div class="grid2">${big('Rientro minimo', T(mn), '30 minuti di pausa')}${big('Rientro massimo', T(mx), mx === PARAMETRI.pausaFineFinestra ? 'limite fascia 14:15' : 'per uscire alle 17:15')}</div><div class="sub">${isOggi ? `Margine: ${Math.max(0, mx - nm)} min sotto il rientro massimo · ` : ''}pausa utile ${mx - P(c.inizioPausa)} min</div>`; }
+  else if (f === 'pausa') { const { mn, mx } = rientri(c); h = `<div class="tag">In pausa dalle ${c.inizioPausa}</div><div class="grid2">${big('Rientro minimo', T(mn), '30 minuti di pausa')}${big('Rientro massimo', T(mx), mx === PARAMETRI.pausaFineFinestra ? 'limite fascia 14:15' : 'per uscire alle 17:15')}</div><div class="sub">${isOggi ? `Margine: ${F(Math.max(0, mx - nm))} sotto il rientro massimo · ` : ''}pausa utile ${F(Math.max(0, mx - P(c.inizioPausa)))}</div>`; }
   else if (f === 'pom') {
     let boxLive = '';
     if (c.isLive) {
@@ -1373,8 +1379,18 @@ function renderGiornoStorico(d) {
   return el;
 }
 
+const storicoOpenMesi = new Set();
+let storicoOpenInit = false;
+
 function caricaStorico() {
-  const box = $('storicoList'); box.innerHTML = '';
+  const box = $('storicoList');
+  const prevDetails = box.querySelectorAll('details.storico-mese[data-ym]');
+  if (prevDetails.length > 0) {
+    storicoOpenInit = true;
+    storicoOpenMesi.clear();
+    prevDetails.forEach(d => { if (d.open) storicoOpenMesi.add(d.dataset.ym); });
+  }
+  box.innerHTML = '';
   const datePresenti = giorniConDati();
   const tISO = todayISO();
   const ymSet = new Set(datePresenti.map(d => d.slice(0, 7)));
@@ -1409,9 +1425,20 @@ function caricaStorico() {
 
     const details = document.createElement('details');
     details.className = 'card storico-mese';
+    details.dataset.ym = ym;
     // Aperto di default il primo mese con dati oppure il primo dell'elenco se ha dati
     const primoConDati = mesiSorted.find(m => datePresenti.some(d => d.startsWith(m)));
-    if (ym === primoConDati || (idx === 0 && countDati > 0)) details.open = true;
+    if (storicoOpenInit) {
+      details.open = storicoOpenMesi.has(ym);
+    } else if (ym === primoConDati || (idx === 0 && countDati > 0)) {
+      details.open = true;
+      storicoOpenMesi.add(ym);
+    }
+    details.addEventListener('toggle', () => {
+      storicoOpenInit = true;
+      if (details.open) storicoOpenMesi.add(ym);
+      else storicoOpenMesi.delete(ym);
+    });
 
     const summary = document.createElement('summary');
     summary.style.cssText = 'cursor:pointer;font-weight:700;display:flex;justify-content:space-between;align-items:center;padding:6px 0;user-select:none;color:var(--navy);font-size:1.05rem;';
@@ -1474,10 +1501,11 @@ function caricaRiepilogo() {
   const ym = ymStr(rie.y, rie.m), y = String(rie.y), m = datiMese(ym), ver = !!S.ver[ym], rga = repGiorniAnno(y); $('rieNav').innerHTML = navHTML();
   $('rieMese').innerHTML = `<div class="h">${cap(nomeMese(ym))}${ver ? ' · verificato ✓' : ''}</div>` + righeMese(m) + `<div class="foot"><button class="btn" onclick="apriReport('${ym}')">Report del mese</button><button class="btn ${ver ? '' : 'main'}" onclick="toggleVer('${ym}')">${ver ? 'Sblocca mese' : 'Segna come verificato'}</button></div>`;
   const acc = accantonatoAnno(y), usate = usatoAnno('ORE RECUPERO', y), e4 = extra4Nov(y), cf = carryFerie(y), fr = residuoFerie(y + '-12-31');
-  const bar = (l, u, maxH, note) => `<div class="f"><div class="row" style="border:0;padding:0"><span>${l}</span><b>${F(u)} / ${F(maxH * 60)}</b></div><div class="bar"><i style="width:${maxH ? Math.min(100, u / (maxH * 60) * 100) : 0}%"></i></div>${note ? `<small class="note">${note}</small>` : ''}</div>`;
+  const recRip = bancaRip(y), recLim = recRip + acc, recRes = Math.max(0, recLim - usate);
+  const bar = (l, u, maxH, note) => `<div class="f"><div class="row" style="border:0;padding:0"><span>${l}</span><b>${F(u)} / ${F(maxH * 60)}</b></div><div class="bar"><i style="width:${maxH ? Math.min(100, u / (maxH * 60) * 100) : 0}%${u > maxH * 60 ? ';background:var(--danger)' : ''}"></i></div>${note ? `<small class="note">${note}</small>` : ''}</div>`;
   $('rieAnno').innerHTML = `<div class="h">Saldi ${y}</div>` + bar('Ferie usate (anno + riporto)', usatoAnno('FERIE', y), (FERIE_ANNO + cf) / 60, `Riporto dall'anno scorso ${F(cf)} (da usare entro il 30/06) · residuo a fine anno ${F(Math.max(0, fr))}`)
     + bar('Monte ore accantonato nell\'anno', acc, 40, bancaAbilitata(y) ? `Puoi ancora accantonare ${F(accantonabile(y))}` : 'Accantonamento non attivo: a fine anno scorso restavano più di 50h di ferie')
-    + R('Saldo ore recupero (non scade)', F(Math.max(0, bancaRip(y) + acc - usate))) + R('Ore recupero usate', F(usate), usate > bancaRip(y) + acc)
+    + bar('Ore recupero (usate / disponibili)', usate, recLim / 60, `Riporto ${F(recRip)} + accantonato ${F(acc)} · residuo ${F(recRes)} (non scade)${usate > recLim ? ' · ⚠ superato di ' + F(usate - recLim) : ''}`)
     + bar('Ex-festività (si azzerano a fine anno)', usatoAnno('EX-FESTIVITÀ', y), 30) + (e4 ? bar('Ore 4 novembre (si azzerano)', usatoAnno('ORE 4 NOVEMBRE', y), 8) : R('Ore 4 novembre (extra)', 'non maturate'))
     + bar('Visite mediche (si azzerano)', usatoAnno('VISITA MEDICA', y), 30) + R('Malattia annua usata', F(usatoAnno('MALATTIA', y))) + R('Congedo parentale annuo (30%)', F(usatoAnno('CONGEDO PARENTALE', y))) + R('Smart working annuo', F(usatoAnno('SMART WORKING', y))) + R('Sciopero annuo', F(usatoAnno('SCIOPERO', y)))
     + R('Giorni reperibilità 1° squadra (anno)', `${rga.gg1} gg`)
@@ -1878,7 +1906,13 @@ function apriPZ() { const p = S.pz || {}, h = k => p[k] ? F(p[k]).replace('h ', 
 function salvaPZ() { const v = id => P($(id).value.trim()) || 0; if (!$('pzData').value) return alert('Indica la data del punto zero.'); if (!confirm('Da questa data i contatori ripartono dai valori indicati; le registrazioni precedenti non verranno più conteggiate nei saldi. Confermi?')) return;
   mut(() => S.pz = { data: $('pzData').value, ferie: v('pzFerie'), ferieRip: v('pzFerieRip'), ex: v('pzEx'), visite: v('pzVisite'), nov4: v('pzNov4'), rec: v('pzRec'), banca: v('pzBanca'), bancaRip: v('pzBancaRip'), lavNov4: $('pzLav').checked }); chiudiModal('modalPZ'); }
 const rimuoviPZ = () => { mut(() => S.pz = null); chiudiModal('modalPZ'); };
-const apriSync = () => { $('drawer').classList.remove('open'); $('modalSync').classList.add('active'); };
+const hasDatiStoriciInaz = () => (S.t || []).some(t => t.data && t.data >= '2026-03-01' && t.data <= '2026-10-31');
+function aggiornaVisibilitaImportInaz() {
+  const hide = hasDatiStoriciInaz();
+  const b1 = $('boxImportInazOpzioni'); if (b1) b1.style.display = hide ? 'none' : 'flex';
+  const b2 = $('boxImportInazSync'); if (b2) b2.style.display = hide ? 'none' : 'block';
+}
+const apriSync = () => { aggiornaVisibilitaImportInaz(); $('drawer').classList.remove('open'); $('modalSync').classList.add('active'); };
 function esportaDati() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ versione: 4, S }, null, 2)], { type: 'application/json' })); a.download = `backup_cronoflex_${todayISO()}.json`; a.click(); }
 function importaDati() {
   const f = $('fileImport').files[0]; if (!f) return alert('Seleziona un file di backup.'); const rd = new FileReader();
@@ -1961,6 +1995,7 @@ function eliminaChiusura(data) {
 }
 
 function caricaOpzioni() {
+  aggiornaVisibilitaImportInaz();
   const box = $('listaChiusure');
   if (!box) return;
   const list = (S.chiusure || []).sort((a, b) => a.data.localeCompare(b.data));
