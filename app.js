@@ -1,7 +1,7 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.49', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.50', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
-const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {} });
+const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
 const TIPI_DURATA = ['FERIE', 'EX-FESTIVITÀ', 'ORE RECUPERO', 'MALATTIA', 'SMART WORKING', 'ORE 4 NOVEMBRE', 'CONGEDO PARENTALE', 'DONAZIONE SANGUE', 'PERMESSO NON RETRIBUITO'];
 const LIMITI = { 'EX-FESTIVITÀ': 30 * 60, 'VISITA MEDICA': 30 * 60 }, FERIE_ANNO = 168 * 60, SW_SETT = 480;
@@ -49,38 +49,6 @@ function load() {
     S.pz = old('orario_flex_puntozero');
   }
 
-  // AUTO-IMPORT/MERGE SEED DATI INAZ (MARZO - OTTOBRE 2026)
-  const seedT = window.SEED_TIMBRATURE || [];
-  const seedG = window.SEED_GIUSTIFICATIVI || [];
-  if (Array.isArray(seedT) && seedT.length > 0) {
-    if (!Array.isArray(S.t) || S.t.length === 0) {
-      S.t = seedT.map(t => ({ ...t, data: formatExcelDate(t.data) }));
-      S.g = (seedG || []).map(g => ({ ...g, data: formatExcelDate(g.data) }));
-    } else if (!S.t.some(t => t.data && t.data.startsWith('2026-03'))) {
-      const existingT = new Set(S.t.map(t => `${t.data}_${t.tipo}_${t.ora}`));
-      seedT.forEach(t => {
-        const formatted = { ...t, data: formatExcelDate(t.data) };
-        const k = `${formatted.data}_${formatted.tipo}_${formatted.ora}`;
-        if (!existingT.has(k)) {
-          S.t.push(formatted);
-          existingT.add(k);
-        }
-      });
-      const existingG = new Set((S.g || []).map(g => `${g.data}_${g.tipo}_${g.oraInizio || ''}_${g.oraFine || ''}`));
-      (seedG || []).forEach(g => {
-        const formatted = { ...g, data: formatExcelDate(g.data) };
-        const k = `${formatted.data}_${formatted.tipo}_${formatted.oraInizio || ''}_${formatted.oraFine || ''}`;
-        if (!existingG.has(k)) {
-          S.g.push(formatted);
-          existingG.add(k);
-        }
-      });
-    }
-    if (!S.pz || !S.pz.data) {
-      S.pz = { data: '2026-02-28', ore: 0, minuti: 0, segno: '+' };
-    }
-  }
-
   normalizzaGiustificativiStorici();
   applicaParametri();
   allineaImpegniReperibilita();
@@ -88,66 +56,6 @@ function load() {
   save();
 }
 
-window.caricaDatiStoriciInaz = async function(sovrascrivi = false) {
-  let tList = window.SEED_TIMBRATURE;
-  let gList = window.SEED_GIUSTIFICATIVI;
-  if (!Array.isArray(tList) || tList.length === 0) {
-    try {
-      const res = await fetch('sync_data.json?v=' + Date.now());
-      if (res.ok) {
-        const data = await res.json();
-        tList = data.t;
-        gList = data.g;
-      }
-    } catch (e) {
-      console.warn('Fallback sync_data.json non riuscito:', e);
-    }
-  }
-  if (!Array.isArray(tList) || tList.length === 0) {
-    toast('Dati storici Inaz non reperibili.');
-    return false;
-  }
-  mut(() => {
-    if (sovrascrivi || !S.t || S.t.length === 0) {
-      S.t = tList.map(t => ({ ...t, data: formatExcelDate(t.data) }));
-      S.g = (gList || []).map(g => ({ ...g, data: formatExcelDate(g.data) }));
-    } else {
-      const existingT = new Set((S.t || []).map(t => `${t.data}_${t.tipo}_${t.ora}`));
-      tList.forEach(t => {
-        const formatted = { ...t, data: formatExcelDate(t.data) };
-        const k = `${formatted.data}_${formatted.tipo}_${formatted.ora}`;
-        if (!existingT.has(k)) {
-          S.t.push(formatted);
-          existingT.add(k);
-        }
-      });
-      const existingG = new Set((S.g || []).map(g => `${g.data}_${g.tipo}_${g.oraInizio || ''}_${g.oraFine || ''}`));
-      (gList || []).forEach(g => {
-        const formatted = { ...g, data: formatExcelDate(g.data) };
-        const k = `${formatted.data}_${formatted.tipo}_${formatted.oraInizio || ''}_${formatted.oraFine || ''}`;
-        if (!existingG.has(k)) {
-          S.g.push(formatted);
-          existingG.add(k);
-        }
-      });
-    }
-    if (!S.pz || !S.pz.data) {
-      S.pz = { data: '2026-02-28', ore: 0, minuti: 0, segno: '+' };
-    }
-    normalizzaGiustificativiStorici();
-    applicaParametri();
-    allineaImpegniReperibilita();
-  });
-  toast(`Dati Inaz caricati: ${S.t.length} timbrature e ${S.g.length} giustificativi ✓`);
-  const mAttivi = giorniConDati().map(d => d.slice(0, 7));
-  if (mAttivi.length && !mAttivi.includes(ymStr(rie.y, rie.m))) {
-    const ultimo = mAttivi.sort().reverse()[0];
-    rie.y = +ultimo.slice(0, 4);
-    rie.m = +ultimo.slice(5);
-  }
-  refresh();
-  return true;
-};
 const save = () => localStorage.setItem(KEY, JSON.stringify(S));
 function mut(fn) { undoStack.push(JSON.stringify(S)); if (undoStack.length > 30) undoStack.shift(); fn(); invalidaCacheStato(); localStorage.setItem('cf_local_updated_ms', String(Date.now())); save(); refresh(); if (typeof triggerAutoSyncCloud === 'function') triggerAutoSyncCloud(); }
 window.__cfGetState = () => S;
@@ -938,8 +846,9 @@ function renderAttivita(iso) { const l = S.att[iso] || []; $('attList').innerHTM
 function addAtt() { const iso = iso0(currentDate); if (bloccato(iso)) return; const n = $('attNote').value.trim(); mut(() => (S.att[iso] = S.att[iso] || []).push({ cat: $('attCat').value, note: n })); $('attNote').value = ''; }
 const delAtt = i => { const iso = iso0(currentDate); if (!bloccato(iso)) mut(() => S.att[iso].splice(i, 1)); };
 function renderTodo(iso) { const l = S.todo.filter(x => x.data === iso); $('todoList').innerHTML = l.length ? l.map(x => `<div class="tl"><label class="nm chk"><input type="checkbox" ${x.fatto ? 'checked' : ''} onchange="togTodo('${x.id}')"><span style="${x.fatto ? 'text-decoration:line-through;color:var(--muted)' : ''}">${x.testo}</span></label><button class="ib d" onclick="delTodo('${x.id}')" aria-label="Elimina">${IC.bin}</button></div>`).join('') : '<div class="empty">Niente da fare</div>'; }
-function addTodo() { const t = $('todoIn').value.trim(); if (!t) return; mut(() => S.todo.push({ id: uid(), data: iso0(currentDate), testo: t, fatto: false })); $('todoIn').value = ''; }
-const togTodo = id => mut(() => { const x = S.todo.find(y => y.id === id); x.fatto = !x.fatto; }), delTodo = id => mut(() => S.todo = S.todo.filter(x => x.id !== id));
+function addTodo() { const t = $('todoIn').value.trim(); if (!t) return; mut(() => S.todo.push({ id: uid(), data: iso0(currentDate), testo: t, fatto: false })); $('todoIn').value = ''; if (fired()[todayISO() + '_eodtodo']) aggiornaNotificaTodoFineGiornata(false); }
+const togTodo = id => { mut(() => { const x = S.todo.find(y => y.id === id); if (x) x.fatto = !x.fatto; }); if (fired()[todayISO() + '_eodtodo']) aggiornaNotificaTodoFineGiornata(false); };
+const delTodo = id => { mut(() => S.todo = S.todo.filter(x => x.id !== id)); if (fired()[todayISO() + '_eodtodo']) aggiornaNotificaTodoFineGiornata(false); };
 
 // ---------- Pagine, menu e navigazione Indietro ----------
 let navStack = (() => {
@@ -1827,6 +1736,7 @@ function addTodoAgenda() {
   });
   if (inp) inp.value = '';
   caricaAgenda();
+  if (fired()[todayISO() + '_eodtodo']) aggiornaNotificaTodoFineGiornata(false);
   toast('Attività aggiunta al To-Do! ✓');
 }
 
@@ -2093,35 +2003,161 @@ async function delRep(key) {
 }
 function repReminderDay(da) { const d = D(da); do d.setDate(d.getDate() - 1); while (!lavorativo(iso0(d))); return iso0(d); }
 
-// ---------- Notifiche (attive con l'app aperta) ----------
-const fired = () => JSON.parse(localStorage.getItem('cf_fired') || '{}');
+// ---------- Notifiche intelligenti (attive con app aperta / in background) ----------
+const fired = () => { try { return JSON.parse(localStorage.getItem('cf_fired') || '{}'); } catch (e) { return {}; } };
+function puliziaFired() {
+  try {
+    const f = fired(), lim = new Date(); lim.setDate(lim.getDate() - 7);
+    const limIso = iso0(lim); let ch = false;
+    Object.keys(f).forEach(k => { const m = /^(\d{4}-\d{2}-\d{2})/.exec(k); if (m && m[1] < limIso) { delete f[k]; ch = true; } });
+    if (ch) localStorage.setItem('cf_fired', JSON.stringify(f));
+  } catch (e) {}
+}
+const NOTIF_DEF = { ingresso: true, pausa: true, uscitaTodo: true, impegni: true, reperibilita: true };
+const getNotifCfg = () => Object.assign({}, NOTIF_DEF, S.notif || {});
+function aggiornaUINotifiche() {
+  const b = $('notifStatusBadge');
+  if (b) {
+    if (!('Notification' in window)) { b.textContent = 'Non supportate'; b.className = 'bd'; }
+    else if (Notification.permission === 'granted') { b.textContent = 'Attive ✓'; b.className = 'bd g'; }
+    else if (Notification.permission === 'denied') { b.textContent = 'Bloccate dal browser'; b.className = 'bd r'; }
+    else { b.textContent = 'Da attivare'; b.className = 'bd am'; }
+  }
+  const c = getNotifCfg();
+  const map = { nCfgIngresso: 'ingresso', nCfgPausa: 'pausa', nCfgUscitaTodo: 'uscitaTodo', nCfgImpegni: 'impegni', nCfgReperibilita: 'reperibilita' };
+  Object.keys(map).forEach(id => { const el = $(id); if (el) el.checked = !!c[map[id]]; });
+}
+function salvaNotifCfg() {
+  mut(() => {
+    S.notif = {
+      ingresso: $('nCfgIngresso') ? $('nCfgIngresso').checked : true,
+      pausa: $('nCfgPausa') ? $('nCfgPausa').checked : true,
+      uscitaTodo: $('nCfgUscitaTodo') ? $('nCfgUscitaTodo').checked : true,
+      impegni: $('nCfgImpegni') ? $('nCfgImpegni').checked : true,
+      reperibilita: $('nCfgReperibilita') ? $('nCfgReperibilita').checked : true
+    };
+  });
+  toast('Preferenze notifiche salvate ✓');
+}
+function mostraNotificaSW(tit, corpo, tag, dati, renotify = false) {
+  if (!('Notification' in window) || Notification.permission !== 'granted' || !navigator.serviceWorker) return;
+  navigator.serviceWorker.ready.then(r => r.showNotification(tit, {
+    body: corpo, icon: 'icon-192.png', badge: 'icon-192.png',
+    tag: tag || tit, renotify: !!renotify, data: dati || ''
+  })).catch(() => {});
+}
+function chiudiNotificaTag(tag) {
+  if (!navigator.serviceWorker || !tag) return;
+  navigator.serviceWorker.ready.then(r => r.getNotifications({ tag }).then(list => list.forEach(n => n.close()))).catch(() => {});
+}
 function notifica(tit, corpo, k, dati) {
   if (k) { const f = fired(); if (f[k]) return; f[k] = 1; localStorage.setItem('cf_fired', JSON.stringify(f)); }
   toast(`${tit} — ${corpo}`);
-  if ('Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker) navigator.serviceWorker.ready.then(r => r.showNotification(tit, { body: corpo, icon: 'icon-192.png', tag: k || tit, data: dati || '' }));
+  mostraNotificaSW(tit, corpo, k || tit, dati || '', true);
 }
-function abilitaNotifiche() { if (!('Notification' in window)) return alert('Notifiche non supportate da questo browser.'); Notification.requestPermission().then(p => toast(p === 'granted' ? 'Notifiche attivate' : 'Notifiche non consentite')); $('drawer').classList.remove('open'); }
-function controlli() {
-  const n = new Date(), nm = n.getHours() * 60 + n.getMinutes(), iso = todayISO(), tG = tDay(iso), c = calcolaGiornata(iso, tG, gDay(iso), nm), f = fase(tG, isVen(iso));
-  const at = (m, k, tit, msg) => { if (nm >= m && nm - m < 30) notifica(tit, msg, iso + k); };
-  if (f === 'pausa') { const { mn, mx } = rientri(c); at(mn, 'rmin', 'Rientro minimo', 'Puoi rientrare dalla pausa'); at(mx, 'rmax', 'Rientro massimo', 'Rientra ora per uscire alle 17:15'); }
-  if (f === 'pom') { at(P(c.uscitaTeorica), 'umin', 'Uscita minima', `Puoi uscire (${c.uscitaTeorica})`); const s0 = P(c.oraScatto30m); for (let k = 0; k < 12; k++) at(s0 + 15 * k, 's' + k, 'Straordinario', `Uscendo ora maturi +${30 + 15 * k} min`); }
-  const ev = S.ev.filter(e => evCopreGiorno(e, iso)).sort((a, b) => (a.ora || '').localeCompare(b.ora || ''));
-  if (nm >= 480 && ev.length) notifica('Agenda di oggi', ev.map(e => `${e.ora || ''} ${e.titolo}`).join(' · '), iso + 'ag');
-  // Promemoria personalizzati appuntamenti
-  ev.forEach(e => {
-    if (!e.ora) return;
-    const oraMin = P(e.ora);
-    const remMin = e.reminder !== undefined ? parseInt(e.reminder, 10) : 30;
-    if (remMin >= 0) {
-      const targetMin = oraMin - remMin;
-      if (nm >= targetMin && nm - targetMin < 30) {
-        const remMsg = remMin === 0 ? `Inizia adesso (${e.ora})` : `Tra ${remMin} min (${e.ora})`;
-        notifica(`Promemoria: ${e.titolo}`, `${remMsg}${e.luogo ? ' · ' + e.luogo : ''}`, `${iso}_evrem_${e.id}`);
-      }
-    }
+function abilitaNotifiche() {
+  if (!('Notification' in window)) return alert('Notifiche non supportate da questo browser.');
+  Notification.requestPermission().then(p => {
+    aggiornaUINotifiche();
+    toast(p === 'granted' ? 'Notifiche attivate ✓' : 'Notifiche non consentite');
+    if (p === 'granted') controlli();
   });
-  S.rep.forEach(r => { if (repReminderDay(r.da) === iso && nm >= 480) notifica(repCatLabel(repCat(r)), `Dal ${r.da.split('-').reverse().join('/')} inizia il turno (${repCatLabel(repCat(r))})`, iso + 'rp' + r.da); });
+  $('drawer').classList.remove('open');
+}
+function testaNotifica() {
+  if (!('Notification' in window)) return alert('Notifiche non supportate da questo browser.');
+  if (Notification.permission !== 'granted') return abilitaNotifiche();
+  mostraNotificaSW('Cronoflex — Test notifiche', 'Le notifiche di promemoria sono attive e funzionanti ✓', 'cf-test-' + Date.now(), '#oggi', true);
+  toast('Notifica di prova inviata ✓');
+}
+function aggiornaNotificaTodoFineGiornata(forzaToast = false) {
+  const cfg = getNotifCfg();
+  if (!cfg.uscitaTodo) return;
+  const iso = todayISO();
+  const todosOggi = (S.todo || []).filter(x => x.data === iso);
+  const tag = 'cf-todo-' + iso;
+  if (!todosOggi.length) { chiudiNotificaTag(tag); return; }
+  const aperti = todosOggi.filter(x => !x.fatto);
+  const fatti = todosOggi.length - aperti.length;
+  let tit, corpo;
+  if (aperti.length > 0) {
+    tit = `Fine giornata · ${aperti.length} da fare (${fatti}/${todosOggi.length})`;
+    const preview = aperti.slice(0, 3).map(x => x.testo).join(' · ');
+    corpo = aperti.length > 3 ? `${preview} (+${aperti.length - 3} altri)` : preview;
+  } else {
+    tit = 'Fine giornata · Tutto completato ✓';
+    corpo = `Hai chiuso tutte le ${todosOggi.length} attività di oggi!`;
+  }
+  if (forzaToast) toast(`${tit} — ${corpo}`);
+  mostraNotificaSW(tit, corpo, tag, '#oggi', !!forzaToast);
+}
+function controlli() {
+  const n = new Date(), nm = n.getHours() * 60 + n.getMinutes(), iso = todayISO();
+  const tG = tDay(iso), gG = gDay(iso), c = calcolaGiornata(iso, tG, gG, nm), f = fase(tG, isVen(iso));
+  const cfg = getNotifCfg();
+  const at = (m, k, tit, msg, dati) => { if (nm >= m && nm - m < 30) notifica(tit, msg, iso + k, dati || '#oggi'); };
+
+  // M5.1a — Inizio giornata (timbratura ingresso)
+  if (cfg.ingresso && lavorativo(iso) && f === 'prima' && !gG.some(g => g.tuttaGiornata)) {
+    if (nm >= 525 && nm < 555) notifica('Buongiorno · Ingresso', 'Ricorda di timbrare l’ingresso in sede', iso + '_ing', '#oggi');
+  } else if (f !== 'prima') {
+    chiudiNotificaTag(iso + '_ing');
+  }
+
+  // M5.1b — Metà giornata (inizio e fine pausa)
+  if (cfg.pausa) {
+    if (!isVen(iso) && f === 'mat') {
+      const pIni = (typeof PARAM !== 'undefined' && PARAM.pausaInizio) ? P(PARAM.pausaInizio) : 765;
+      if (nm >= pIni && nm < pIni + 30) notifica('Pausa pranzo', 'Fascia pausa aperta: ricorda di timbrare l’uscita pausa', iso + '_pstart', '#oggi');
+    }
+    if (f === 'pausa') {
+      const { mn, mx } = rientri(c);
+      at(mn, 'rmin', 'Rientro minimo', 'Puoi rientrare dalla pausa', '#oggi');
+      at(mx, 'rmax', 'Rientro massimo', 'Rientra ora per uscire alle 17:15', '#oggi');
+    }
+  }
+
+  // M5.1c — Fine giornata: uscita minima, straordinario e riepilogo To-Do live
+  if (f === 'pom') {
+    at(P(c.uscitaTeorica), 'umin', 'Uscita minima', `Puoi uscire (${c.uscitaTeorica})`, '#oggi');
+    const s0 = P(c.oraScatto30m);
+    for (let k = 0; k < 12; k++) at(s0 + 15 * k, 's' + k, 'Straordinario', `Uscendo ora maturi +${30 + 15 * k} min`, '#oggi');
+  }
+  if (cfg.uscitaTodo && lavorativo(iso) && f !== 'prima') {
+    const sogliaFine = (f === 'pom' && c.uscitaTeorica) ? Math.max(480, P(c.uscitaTeorica) - 30) : (isVen(iso) ? 870 : 1005);
+    if (nm >= sogliaFine && !fired()[iso + '_eodtodo']) {
+      const ff = fired(); ff[iso + '_eodtodo'] = 1; localStorage.setItem('cf_fired', JSON.stringify(ff));
+      aggiornaNotificaTodoFineGiornata(true);
+    }
+  }
+
+  // M5.2 — Impegni con orario (30' prima) e agenda del giorno
+  const ev = S.ev.filter(e => evCopreGiorno(e, iso)).sort((a, b) => (a.ora || '').localeCompare(b.ora || ''));
+  if (cfg.impegni && nm >= 480 && ev.length) notifica('Agenda di oggi', ev.map(e => `${e.ora || ''} ${e.titolo}`).join(' · '), iso + 'ag', '#agenda');
+  if (cfg.impegni) {
+    ev.forEach(e => {
+      if (!e.ora) return;
+      const oraMin = P(e.ora);
+      const remMin = e.reminder !== undefined ? parseInt(e.reminder, 10) : 30;
+      if (remMin >= 0) {
+        const targetMin = oraMin - remMin;
+        if (nm >= targetMin && nm - targetMin < 30) {
+          const remMsg = remMin === 0 ? `Inizia adesso (${e.ora})` : `Tra ${remMin} min (${e.ora})`;
+          notifica(`Promemoria: ${e.titolo}`, `${remMsg}${e.luogo ? ' · ' + e.luogo : ''}`, `${iso}_evrem_${e.id}`, '#agenda');
+        }
+      }
+    });
+  }
+
+  // M5.2 — Reperibilità (1° giorno lavorativo precedente all'inizio)
+  if (cfg.reperibilita) {
+    S.rep.forEach(r => {
+      if (repReminderDay(r.da) === iso && nm >= 480) {
+        notifica(repCatLabel(repCat(r)), `Dal ${r.da.split('-').reverse().join('/')} inizia il turno (${repCatLabel(repCat(r))})`, iso + 'rp' + r.da, '#rep');
+      }
+    });
+  }
+
   const rd = reportDovuto(); if (rd) notifica('Report mensile pronto', `Verifica ${nomeMese(rd)} con la busta paga`, 'rep' + rd + iso.slice(0, 7), '#report=' + rd);
 }
 
@@ -2130,17 +2166,47 @@ function apriPZ() { const p = S.pz || {}, h = k => p[k] ? F(p[k]).replace('h ', 
 function salvaPZ() { const v = id => P($(id).value.trim()) || 0; if (!$('pzData').value) return alert('Indica la data del punto zero.'); if (!confirm('Da questa data i contatori ripartono dai valori indicati; le registrazioni precedenti non verranno più conteggiate nei saldi. Confermi?')) return;
   mut(() => S.pz = { data: $('pzData').value, ferie: v('pzFerie'), ferieRip: v('pzFerieRip'), ex: v('pzEx'), visite: v('pzVisite'), nov4: v('pzNov4'), rec: v('pzRec'), banca: v('pzBanca'), bancaRip: v('pzBancaRip'), lavNov4: $('pzLav').checked }); chiudiModal('modalPZ'); }
 const rimuoviPZ = () => { mut(() => S.pz = null); chiudiModal('modalPZ'); };
-const hasDatiStoriciInaz = () => (S.t || []).some(t => t.data && t.data >= '2026-03-01' && t.data <= '2026-10-31');
-function aggiornaVisibilitaImportInaz() {
-  const hide = hasDatiStoriciInaz();
-  const b1 = $('boxImportInazOpzioni'); if (b1) b1.style.display = hide ? 'none' : 'flex';
-  const b2 = $('boxImportInazSync'); if (b2) b2.style.display = hide ? 'none' : 'block';
-}
-const apriSync = () => { aggiornaVisibilitaImportInaz(); $('drawer').classList.remove('open'); $('modalSync').classList.add('active'); };
+const apriSync = () => { $('drawer').classList.remove('open'); if ($('chkMergeImport')) $('chkMergeImport').checked = false; $('modalSync').classList.add('active'); };
 function esportaDati() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ versione: 4, S }, null, 2)], { type: 'application/json' })); a.download = `backup_cronoflex_${todayISO()}.json`; a.click(); }
 function importaDati() {
-  const f = $('fileImport').files[0]; if (!f) return alert('Seleziona un file di backup.'); const rd = new FileReader();
-  rd.onload = e => { try { const d = JSON.parse(e.target.result); const n = d.S || { t: d.timbrature, g: d.giustificativi, d: d.destinazioni || {}, pz: d.puntoZero || null }; if (!n.t || !n.g) return alert('File di backup non valido.'); mut(() => S = Object.assign(VUOTO(), n)); chiudiModal('modalSync'); } catch (err) { alert('Errore: ' + err.message); } };
+  const f = $('fileImport').files[0]; if (!f) return alert('Seleziona un file di backup.');
+  const merge = !!($('chkMergeImport') && $('chkMergeImport').checked);
+  const rd = new FileReader();
+  rd.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      const n = d.S || { t: d.timbrature, g: d.giustificativi, d: d.destinazioni || {}, pz: d.puntoZero || null };
+      if (!n.t || !n.g) return alert('File di backup non valido.');
+      let aggT = 0, aggG = 0;
+      mut(() => {
+        if (merge) {
+          S.t = S.t || []; S.g = S.g || []; S.d = S.d || {};
+          const exT = new Set(S.t.map(t => `${t.data}_${t.tipo}_${t.ora}`));
+          n.t.forEach(t => {
+            const ft = { ...t, data: formatExcelDate(t.data) };
+            const k = `${ft.data}_${ft.tipo}_${ft.ora}`;
+            if (ft.data && !exT.has(k)) { S.t.push(ft); exT.add(k); aggT++; }
+          });
+          const exG = new Set(S.g.map(g => `${g.data}_${g.tipo}_${g.oraInizio || ''}_${g.oraFine || ''}`));
+          n.g.forEach(g => {
+            const fg = { ...g, data: formatExcelDate(g.data) };
+            const k = `${fg.data}_${fg.tipo}_${fg.oraInizio || ''}_${fg.oraFine || ''}`;
+            if (fg.data && !exG.has(k)) { S.g.push(fg); exG.add(k); aggG++; }
+          });
+          Object.keys(n.d || {}).forEach(k => { if (!S.d[k]) S.d[k] = n.d[k]; });
+        } else {
+          S = Object.assign(VUOTO(), n);
+        }
+        normalizzaGiustificativiStorici();
+        applicaParametri();
+        allineaImpegniReperibilita();
+      });
+      $('fileImport').value = '';
+      if ($('chkMergeImport')) $('chkMergeImport').checked = false;
+      chiudiModal('modalSync');
+      toast(merge ? `Unite ${aggT} timbrature e ${aggG} giustificativi ai dati attuali ✓` : 'Backup ripristinato ✓');
+    } catch (err) { alert('Errore: ' + err.message); }
+  };
   rd.readAsText(f);
 }
 async function forzaAggiornamento() { try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); for (const k of await caches.keys()) await caches.delete(k); } catch (e) {} location.replace('index.html?v=' + Date.now()); }
@@ -2151,7 +2217,12 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (aveva && !window._ric) { window._ric = 1; location.reload(); } });
   navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.open) location.hash = e.data.open, apriDaHash(); });
 }
-function apriDaHash() { const m = /report=(\d{4}-\d{2})/.exec(location.hash); if (m) { rie.y = +m[1].slice(0, 4); rie.m = +m[1].slice(5); apriReport(m[1]); } }
+function apriDaHash() {
+  const h = location.hash || '';
+  const m = /report=(\d{4}-\d{2})/.exec(h);
+  if (m) { rie.y = +m[1].slice(0, 4); rie.m = +m[1].slice(5); apriReport(m[1]); return; }
+  if (h === '#oggi' || h === '#agenda' || h === '#rep') pagina(h.slice(1));
+}
 window.addEventListener('beforeunload', () => {
   try {
     if (pagina.cur) localStorage.setItem('cf_last_page', pagina.cur);
@@ -2160,9 +2231,7 @@ window.addEventListener('beforeunload', () => {
 });
 window.onload = () => {
   load();
-  if (Array.isArray(window.SEED_TIMBRATURE) && window.SEED_TIMBRATURE.length > 0 && (!S.t || !S.t.some(t => t.data && t.data.startsWith('2026-03')))) {
-    window.caricaDatiStoriciInaz(false);
-  }
+  puliziaFired();
   const mAttivi = giorniConDati().map(d => d.slice(0, 7));
   if (mAttivi.length && !mAttivi.includes(ymStr(rie.y, rie.m))) {
     const ultimo = mAttivi.sort().reverse()[0];
@@ -2219,7 +2288,7 @@ function eliminaChiusura(data) {
 }
 
 function caricaOpzioni() {
-  aggiornaVisibilitaImportInaz();
+  aggiornaUINotifiche();
   const box = $('listaChiusure');
   if (!box) return;
   const list = (S.chiusure || []).sort((a, b) => a.data.localeCompare(b.data));
