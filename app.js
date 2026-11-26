@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.44', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.45', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {} });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -84,6 +84,7 @@ function load() {
   normalizzaGiustificativiStorici();
   applicaParametri();
   allineaImpegniReperibilita();
+  invalidaCacheStato();
   save();
 }
 
@@ -148,10 +149,11 @@ window.caricaDatiStoriciInaz = async function(sovrascrivi = false) {
   return true;
 };
 const save = () => localStorage.setItem(KEY, JSON.stringify(S));
-function mut(fn) { undoStack.push(JSON.stringify(S)); if (undoStack.length > 30) undoStack.shift(); fn(); localStorage.setItem('cf_local_updated_ms', String(Date.now())); save(); refresh(); if (typeof triggerAutoSyncCloud === 'function') triggerAutoSyncCloud(); }
+function mut(fn) { undoStack.push(JSON.stringify(S)); if (undoStack.length > 30) undoStack.shift(); fn(); invalidaCacheStato(); localStorage.setItem('cf_local_updated_ms', String(Date.now())); save(); refresh(); if (typeof triggerAutoSyncCloud === 'function') triggerAutoSyncCloud(); }
 window.__cfGetState = () => S;
 window.__cfApplyCloudState = (remoteS, remoteMs) => {
   S = Object.assign(VUOTO(), remoteS);
+  invalidaCacheStato();
   normalizzaGiustificativiStorici();
   applicaParametri();
   allineaImpegniReperibilita();
@@ -162,13 +164,14 @@ window.__cfApplyCloudState = (remoteS, remoteMs) => {
 };
 window.__cfResetLocalState = () => {
   S = VUOTO();
+  invalidaCacheStato();
   applicaParametri();
   localStorage.removeItem('cf_local_updated_ms');
   save();
   refresh();
 };
 window.__cfOpenModal = id => { const e = $(id); if (e) e.classList.add('active'); };
-function annulla() { if (!undoStack.length) return toast('Nessuna operazione da annullare'); S = JSON.parse(undoStack.pop()); save(); refresh(); toast('Ultima operazione annullata'); }
+function annulla() { if (!undoStack.length) return toast('Nessuna operazione da annullare'); S = JSON.parse(undoStack.pop()); invalidaCacheStato(); save(); refresh(); toast('Ultima operazione annullata'); }
 function toast(m) { const e = $('toast'); e.textContent = m; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 5000); }
 const bloccato = iso => { if (S.ver[iso.slice(0, 7)]) { toast('Mese verificato: sbloccalo dal Riepilogo per modificarlo'); return true; } return false; };
 
@@ -202,10 +205,40 @@ const tipoGiorno = iso => ({ rip: dow(iso) === 0 || dow(iso) === 6, fest: festiv
 const lavorativo = iso => { const t = tipoGiorno(iso); return !t.rip && !t.fest; };
 const ultimoMese = (y, m) => new Date(y, m, 0).getDate();
 
+// ---------- Cache di calcolo per-stato ----------
+let _stateRev = 0;
+const _calcCache = { rev: -1, day: {}, riparto: {}, giorni: null };
+function invalidaCacheStato() {
+  _stateRev++;
+  _calcCache.rev = _stateRev;
+  _calcCache.day = {};
+  _calcCache.riparto = {};
+  _calcCache.giorni = null;
+}
+
 // ---------- Accessi dati ----------
 const tDay = iso => S.t.filter(t => t.data === iso && !t.rep), gDay = iso => S.g.filter(g => g.data === iso);
-const calcDay = iso => calcolaGiornata(iso, tDay(iso), gDay(iso), null);
-const giorniConDati = () => [...new Set([...S.t.map(t => t.data), ...S.g.map(g => g.data)])].filter(Boolean).sort();
+const calcDay = iso => {
+  if (_calcCache.rev !== _stateRev) {
+    _calcCache.rev = _stateRev;
+    _calcCache.day = {};
+    _calcCache.riparto = {};
+    _calcCache.giorni = null;
+  }
+  return _calcCache.day[iso] || (_calcCache.day[iso] = calcolaGiornata(iso, tDay(iso), gDay(iso), null));
+};
+const giorniConDati = () => {
+  if (_calcCache.rev !== _stateRev) {
+    _calcCache.rev = _stateRev;
+    _calcCache.day = {};
+    _calcCache.riparto = {};
+    _calcCache.giorni = null;
+  }
+  if (!_calcCache.giorni) {
+    _calcCache.giorni = [...new Set([...S.t.map(t => t.data), ...S.g.map(g => g.data)])].filter(Boolean).sort();
+  }
+  return _calcCache.giorni.slice();
+};
 const getDest = iso => S.d[iso] || null;
 const repCat = r => (r && r.cat === '2SQ') ? '2SQ' : '1SQ';
 const repCatLabel = c => c === '2SQ' ? 'Rincalzo 2° squadra' : 'Reperibilità 1° squadra';
@@ -261,11 +294,14 @@ const bancaAbilitata = y => carryFerie(y) <= 50 * 60;
 const bancaRip = y => { const p = pzAttivo(y); return p ? p.bancaRip || 0 : +y <= primoAnno() ? 0 : saldoBancaFine(String(+y - 1)); };
 const saldoBancaFine = y => bancaRip(y) + accantonatoAnno(y) - usatoAnno('ORE RECUPERO', y);
 function ripartoAnno(y) {
+  const key = String(y);
+  if (_calcCache.rev === _stateRev && _calcCache.riparto[key]) return _calcCache.riparto[key];
   const p = pzAttivo(y); let resto = bancaAbilitata(y) ? PARAMETRI.tettoBancaOre - (p ? p.banca || 0 : 0) : 0; const out = {};
   giorniConDati().filter(d => d.startsWith(y) && (!p || d > p.data)).forEach(d => {
     const s = calcDay(d).straordinarioNettoMin, g = getDest(d) || (resto <= 0 ? 'PAGAMENTO' : null), ban = g === 'BANCA' ? Math.min(s, Math.max(0, resto)) : 0; resto -= ban;
     out[d] = { ban, pag: g === 'PAGAMENTO' ? s : g === 'BANCA' ? s - ban : 0, nd: g ? 0 : s };
   });
+  _calcCache.riparto[key] = out;
   return out;
 }
 const sommaBan = (y, ok) => { const o = ripartoAnno(y), p = pzAttivo(y); return (p ? p.banca || 0 : 0) + Object.keys(o).filter(ok).reduce((a, d) => a + o[d].ban, 0); };
@@ -492,10 +528,7 @@ function aggiornaSchermataOggi() {
   const bn = []; const rp = S.rep.find(r => repReminderDay(r.da) === iso); if (rp) bn.push(`${repCatLabel(repCat(rp))} dal ${rp.da.split('-').reverse().join('/')}: ricordati prima di staccare`);
   const chiusa = giornataChiusa(iso, tG), al = chiusa ? alertGiorno(iso) : [];
   const okBanner = (chiusa && (tG.length || gG.length) && !al.length) ? `<div class="alert" style="background:rgba(46,157,106,0.1);border-color:var(--green);color:var(--green)"><b>✓ Giornata chiusa e completa</b> — Timbrature, attività svolte e cose da fare sono in regola.</div>` : '';
-  const storicoHint = (!tG.length && !gG.length && isOggi && giorniConDati().length > 0)
-    ? `<div class="alert" style="background:rgba(59,130,246,0.08);border-color:#3b82f6;color:var(--navy);font-size:0.85rem">📅 <b>Dati storici Inaz disponibili:</b> trovate ${giorniConDati().length} giornate (marzo–ottobre 2026). <a href="#" onclick="pagina('storico');return false" style="font-weight:700;color:var(--brand);text-decoration:underline">Apri lo Storico</a> o <a href="#" onclick="pagina('riepilogo');return false" style="font-weight:700;color:var(--brand);text-decoration:underline">il Riepilogo</a>.</div>`
-    : '';
-  $('alertContainer').innerHTML = (bn.length ? `<div class="alert">${bn.join('<br>')}</div>` : '') + (al.length ? `<div class="alert"><b>Da sistemare (Giornata chiusa)</b><div class="chips" style="margin-top:6px">${al.map(a => `<button class="chip" onclick="fix('${iso}','${a.f || 'd'}')">${a.t}</button>`).join('')}</div></div>` : okBanner) + storicoHint;
+  $('alertContainer').innerHTML = (bn.length ? `<div class="alert">${bn.join('<br>')}</div>` : '') + (al.length ? `<div class="alert"><b>Da sistemare (Giornata chiusa)</b><div class="chips" style="margin-top:6px">${al.map(a => `<button class="chip" onclick="fix('${iso}','${a.f || 'd'}')">${a.t}</button>`).join('')}</div></div>` : okBanner);
   renderReg(tG, gG, iso); renderAgendaGiorno(iso); renderAttivita(iso); renderTodo(iso);
   const recapRows = [['Entrata normalizzata', c.entrataNorm]];
   if (c.ultimaUscita !== '--:--') {
@@ -549,6 +582,32 @@ const vaiAOggi = () => {
   aggiornaSchermataOggi();
   aggiornaBtnBackUI();
 };
+
+function initSwipeOggi() {
+  const el = $('p-oggi');
+  if (!el || el.dataset.swipeInit) return;
+  el.dataset.swipeInit = '1';
+  let startX = 0, startY = 0, startT = 0, active = false;
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) { active = false; return; }
+    if (document.querySelector('.modal.active') || ($('drawer') && $('drawer').classList.contains('open'))) { active = false; return; }
+    if (e.target && e.target.closest('input, select, textarea, button, a, label')) { active = false; return; }
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    startT = Date.now();
+    active = true;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (!active || e.changedTouches.length !== 1) return;
+    active = false;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    const dt = Date.now() - startT;
+    if (dt < 700 && Math.abs(dx) >= 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      cambiaGiorno(dx > 0 ? -1 : 1);
+    }
+  }, { passive: true });
+}
 
 // Agenda, attività, cose da fare (con supporto eventi multi-giorno e modifica/sync bidirezionale)
 let editEvId = null;
@@ -1868,6 +1927,7 @@ window.onload = () => {
     }
   } catch (e) {}
   pagina(targetPag);
+  initSwipeOggi();
   apriDaHash(); const hv = document.documentElement.dataset.ver, ok = hv === APP_VERSION;
   $('ver').textContent = ok ? `Cronoflex v${APP_VERSION} · by arch. Lonardo Massimo` : `File non allineati (pagina ${hv}, logica ${APP_VERSION}): usa "Forza aggiornamento" dal menu`; $('ver').style.color = ok ? 'var(--muted)' : 'var(--danger)';
   controlli(); setInterval(() => { controlli(); if (pagina.cur === 'oggi') aggiornaSchermataOggi(); }, 30000);
