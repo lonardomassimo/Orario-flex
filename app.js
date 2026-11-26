@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.48', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.49', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {} });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -504,8 +504,29 @@ function aggiornaSchermataOggi() {
       h = `<div class="hl">${!lavorativo(iso) && !gG.length ? (td.fest && td.rip ? 'Festivo che cade di riposo' : td.fest ? 'Giornata festiva' : 'Giornata di riposo') : "In attesa della timbratura d'entrata"}</div>`;
     }
   }
-  else if (f === 'mat') h = `<div class="tag">Mattina · entrata ${c.entrataNorm}</div><div class="grid2">${big('Pausa massima', F(P(c.pausaMassimaPerUscitaMinima)), 'per uscire alle 17:15')}${big('Uscita minima', c.uscitaTeorica, 'con pausa di 30 min')}</div>${pills(c)}${c.anticipoRispettoPalettoMin > 0 ? `<div class="sub">Con la pausa minima finisci le ore ${c.anticipoRispettoPalettoMin} min prima delle 17:15</div>` : ''}`;
-  else if (f === 'pausa') { const { mn, mx } = rientri(c); h = `<div class="tag">In pausa dalle ${c.inizioPausa}</div><div class="grid2">${big('Rientro minimo', T(mn), '30 minuti di pausa')}${big('Rientro massimo', T(mx), mx === PARAMETRI.pausaFineFinestra ? 'limite fascia 14:15' : 'per uscire alle 17:15')}</div><div class="sub">${isOggi ? `Margine: ${F(Math.max(0, mx - nm))} sotto il rientro massimo · ` : ''}pausa utile ${F(Math.max(0, mx - P(c.inizioPausa)))}</div>`; }
+  else if (f === 'mat') {
+    if (c.isSwPomeriggio) {
+      const oreSedeMin = Math.max(0, c.oreDovute - c.smartWorkingMin);
+      h = `<div class="tag">Mattina in sede · entrata ${c.entrataNorm}</div><div class="grid2">${big('Uscita dalla sede', c.uscitaTeorica, `dopo ${F(oreSedeMin)} in sede`)}${big("Inizio Smart (+30')", c.swPomeriggioInizioPrevisto, `fino alle ${c.swPomeriggioFinePrevista} · ${F(c.smartWorkingMin)}`)}</div>`;
+    } else {
+      h = `<div class="tag">Mattina · entrata ${c.entrataNorm}</div><div class="grid2">${big('Pausa massima', F(P(c.pausaMassimaPerUscitaMinima)), 'per uscire alle 17:15')}${big('Uscita minima', c.uscitaTeorica, 'con pausa di 30 min')}</div>${pills(c)}${c.anticipoRispettoPalettoMin > 0 ? `<div class="sub">Con la pausa minima finisci le ore ${c.anticipoRispettoPalettoMin} min prima delle 17:15</div>` : ''}`;
+    }
+  }
+  else if (f === 'pausa') {
+    const { mn, mx } = rientri(c);
+    let swHint = '';
+    if (!isVen(iso) && lavorativo(iso) && !gG.some(g => g.tipo === 'SMART WORKING')) {
+      const lavFinora = Math.floor(Math.max(0, P(c.inizioPausa) - P(c.entrataNorm)) / 15) * 15;
+      const mancano = Math.max(0, c.oreDovute - lavFinora - c.oreGiustificateMin);
+      const swDur = Math.min(240, mancano);
+      if (swDur > 0) {
+        const swIni = P(c.inizioPausa) + PARAMETRI.pausaMinimaMinuti;
+        const swFin = swIni + swDur;
+        swHint = `<div class="sub" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.18)">💻 Smart pomeridiano: servono <b>${F(swDur)}</b> (${T(swIni)}–${T(swFin)})${mancano > 240 ? ` · max 4h (restano ${F(mancano - 240)} scoperti)` : ''}<div style="margin-top:6px"><button class="btn sec" style="padding:5px 10px;font-size:.78rem;width:auto" onclick="completaInSmartDaPausa('${iso}','${T(swIni)}','${T(swFin)}')">💻 Completa in Smart Working</button></div></div>`;
+      }
+    }
+    h = `<div class="tag">In pausa dalle ${c.inizioPausa}</div><div class="grid2">${big('Rientro minimo', T(mn), '30 minuti di pausa')}${big('Rientro massimo', T(mx), mx === PARAMETRI.pausaFineFinestra ? 'limite fascia 14:15' : 'per uscire alle 17:15')}</div><div class="sub">${isOggi ? `Margine: ${F(Math.max(0, mx - nm))} sotto il rientro massimo · ` : ''}pausa utile ${F(Math.max(0, mx - P(c.inizioPausa)))}</div>${swHint}`;
+  }
   else if (f === 'pom') {
     let boxLive = '';
     if (c.isLive) {
@@ -1005,7 +1026,13 @@ function refresh() {
 const apriMenu = () => $('drawer').classList.toggle('open');
 
 // ---------- Timbrature ----------
-function quickTimbra(tipo) { const iso = iso0(currentDate); if (bloccato(iso)) return; const n = new Date(); mut(() => S.t.push({ data: iso, ora: `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`, tipo, mancata: false, fittizia: false, autorizzata: false })); }
+function quickTimbra(tipo) {
+  const iso = iso0(currentDate);
+  if (bloccato(iso)) return;
+  const n = new Date();
+  mut(() => S.t.push({ data: iso, ora: `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`, tipo, mancata: false, fittizia: false, autorizzata: false }));
+  if (tipo === 'E') allineaSmartPomeridianoAEntrata(iso);
+}
 function apriTimb(tipo, ora, idx) {
   editIdx = idx === undefined ? null : idx; const n = new Date(), t = editIdx === null ? {} : S.t[editIdx];
   $('selTipoTimb').value = tipo || 'E'; $('oraTimbManuale').value = ora || `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
@@ -1017,6 +1044,7 @@ function salvaTimbraturaManuale() {
   const ora = $('oraTimbManuale').value, tipo = $('selTipoTimb').value, iso = editIdx === null ? iso0(currentDate) : S.t[editIdx].data; if (!ora || bloccato(iso)) return;
   const f = { ora: ora.replace(/^0/, ''), tipo, mancata: $('chkMancata').checked, rep: $('chkRep').checked, fittizia: false };
   mut(() => editIdx === null ? S.t.push({ data: iso, autorizzata: false, ...f }) : Object.assign(S.t[editIdx], f)); chiudiModal('modalTimb');
+  if (tipo === 'E') allineaSmartPomeridianoAEntrata(iso);
   const mi = f.mancata && mancataInfo(iso); if (mi) toast(`Mancata timbratura n° ${mi.n} del mese${mi.oltre ? ` — oltre il limite di 1: +${mi.n - 1}` : ' (tollerata)'}`);
 }
 const apriModal = id => $(id).classList.add('active'); const chiudiModal = id => $(id).classList.remove('active');
@@ -1181,10 +1209,21 @@ function aggiornaFormGiust() {
   }
   $('visitaFields').style.display = t === 'VISITA MEDICA' ? 'block' : 'none';
   $('durataFields').style.display = TIPI_DURATA.includes(t) ? 'block' : 'none';
+  const chkFull = $('chkTuttaGiornata');
+  if (chkFull) {
+    if (t === 'SMART WORKING' && isVen(iso)) {
+      chkFull.checked = true;
+      chkFull.disabled = true;
+      aggiornaCampiOrarioGiust();
+    } else {
+      chkFull.disabled = false;
+    }
+  }
   let r = residuo(t, iso);
   if (editGiustIdx !== null && S.g[editGiustIdx] && S.g[editGiustIdx].tipo === t && r !== null) {
     r += uso(S.g[editGiustIdx]);
   }
+  const venSwNote = (t === 'SMART WORKING' && isVen(iso)) ? " · Di venerdì lo Smart Working è solo per l'intera giornata (6h)" : '';
   $('limiteInfo').textContent = t === 'SCIOPERO'
     ? `Intera giornata: ${T(oreGiornataMin()).slice(0, -3).replace(/^0/, '')} ore non retribuite`
     : t === 'CONGEDO PARENTALE'
@@ -1194,11 +1233,52 @@ function aggiornaFormGiust() {
         : t === 'ORE 4 NOVEMBRE' && !extra4Nov(y)
           ? 'Non maturate: serve aver lavorato il 4 novembre'
           : r <= 0
-            ? 'Soglia raggiunta: inserimento bloccato'
-            : `Residuo disponibile${t === 'SMART WORKING' ? ' questa settimana' : t === 'FERIE' && iso > y + '-06-30' && carryFerie(y) > carryUsato(y) ? ' (riporto scaduto il 30 giugno)' : ''}: ${F(r)}`;
+            ? 'Soglia raggiunta: inserimento bloccato' + venSwNote
+            : `Residuo disponibile${t === 'SMART WORKING' ? ' questa settimana' : t === 'FERIE' && iso > y + '-06-30' && carryFerie(y) > carryUsato(y) ? ' (riporto scaduto il 30 giugno)' : ''}: ${F(r)}${venSwNote}`;
   if (TIPI_DURATA.includes(t) && !($('chkTuttaGiornata') && $('chkTuttaGiornata').checked)) {
     ricalcolaDurataDaOrariGiust();
   }
+}
+
+function completaInSmartDaPausa(iso, ini, fin) {
+  currentDate = D(iso);
+  apriDialogGiustificativo({
+    tipoForce: 'SMART WORKING',
+    tuttaGiornata: false,
+    inizio: ini,
+    fine: fin,
+    hint: 'La timbratura di inizio pausa verrà convertita automaticamente in Uscita per chiudere la mezza giornata in sede.'
+  });
+}
+
+async function allineaSmartPomeridianoAEntrata(iso) {
+  if (!iso || isVen(iso)) return;
+  const tG = tDay(iso);
+  if (!tG.some(t => t.tipo === 'E') || tG.some(t => t.tipo === 'U')) return;
+  const gSw = S.g.find(g => g.data === iso && g.tipo === 'SMART WORKING' && !g.tuttaGiornata && (!g.oraInizio || P(g.oraInizio) >= 720));
+  if (!gSw) return;
+  const c = calcolaGiornata(iso, tG, gDay(iso), null);
+  if (!c.isSwPomeriggio || c.swPomeriggioInizioPrevisto === '--:--' || c.swPomeriggioFinePrevista === '--:--') return;
+  if (gSw.oraInizio === c.swPomeriggioInizioPrevisto && gSw.oraFine === c.swPomeriggioFinePrevista) return;
+  let evToSync = null;
+  mut(() => {
+    gSw.oraInizio = c.swPomeriggioInizioPrevisto;
+    gSw.oraFine = c.swPomeriggioFinePrevista;
+    const ev = gSw.id ? S.ev.find(e => e.giustId === gSw.id) : null;
+    if (ev) {
+      ev.ora = gSw.oraInizio;
+      ev.oraFine = gSw.oraFine;
+      if (isGoogleConfigured() && ev.syncGoogle !== false) {
+        ev.pendingSync = ev.googleId ? 'update' : 'create';
+      }
+      evToSync = ev;
+    }
+  });
+  if (evToSync && isGoogleConfigured()) {
+    if (evToSync.googleId) await aggiornaEventoGoogle(evToSync);
+    else await inviaEventoGoogle(evToSync);
+  }
+  toast(`Smart pomeridiano allineato a ${gSw.oraInizio}–${gSw.oraFine} (uscita sede ${c.uscitaTeorica}) ✓`);
 }
 
 function smartWorkingOrarioEv(g) {
@@ -1226,7 +1306,7 @@ async function salvaGiustificativo() {
     n.oraFine = '';
     n.durata = T(oreGiornataMin()).replace(/^0/, '');
   } else if (TIPI_DURATA.includes(tipo)) {
-    const isFull = $('chkTuttaGiornata') && $('chkTuttaGiornata').checked;
+    const isFull = (tipo === 'SMART WORKING' && isVen(iso)) || ($('chkTuttaGiornata') && $('chkTuttaGiornata').checked);
     if (isFull) {
       n.tuttaGiornata = true;
       n.oraInizio = '';
@@ -1241,6 +1321,7 @@ async function salvaGiustificativo() {
       const d = ($('durataManuale').value || '').trim();
       const m = /^\d{1,2}:[0-5]\d$/.test(d) ? P(d) : 0;
       if (!m) return alert('Durata non valida: verifica gli orari di inizio e fine (es. 09:00 – 10:30).');
+      if (tipo === 'SMART WORKING' && m > 240) return alert('Lo Smart Working di mezza giornata ha un limite massimo di 4 ore (4:00).');
       if (tipo !== 'SMART WORKING' && m % 15) return alert("Questo giustificativo si prende a scatti di 15 minuti.");
       if (tipo === 'FERIE' && m < 30) return alert("Per le Ferie il primo scatto minimo è di 30 minuti (per coprire 15 minuti scegli Ex-festività o Ore recupero, oppure estendi l'orario a 30 min).");
       n.tuttaGiornata = false;
@@ -1272,6 +1353,7 @@ async function salvaGiustificativo() {
   const prevG = (editGiustIdx !== null && S.g[editGiustIdx]) ? { ...S.g[editGiustIdx] } : null;
   let swEvToSync = null;
   let swNeedsDelete = false;
+  let pausaConvertitaInUscita = false;
   const chosenCal = getWritableSelectedGoogleCalendars()[0] || 'primary';
   const cache = (S.gcal && S.gcal.calCache) || [];
   const calMeta = cache.find(c => c.id === chosenCal) || {};
@@ -1279,6 +1361,13 @@ async function salvaGiustificativo() {
   mut(() => {
     if (n.tipo === 'SMART WORKING') {
       n.id = (prevG && prevG.id) || uid();
+      if (!n.tuttaGiornata && (!n.oraInizio || P(n.oraInizio) >= 720)) {
+        const tPausa = S.t.find(t => t.data === iso && !t.rep && t.tipo === 'U PAUSA');
+        if (tPausa && !S.t.some(t => t.data === iso && !t.rep && (t.tipo === 'E PAUSA' || t.tipo === 'U'))) {
+          tPausa.tipo = 'U';
+          pausaConvertitaInUscita = true;
+        }
+      }
     }
     if (editGiustIdx !== null && S.g[editGiustIdx]) {
       S.g[editGiustIdx] = n;
@@ -1346,6 +1435,12 @@ async function salvaGiustificativo() {
   editGiustIdx = null;
   chiudiModal('modalGiust');
 
+  if (pausaConvertitaInUscita) {
+    toast('Smart Working salvato · Inizio pausa convertito in Uscita ✓');
+  }
+  if (n.tipo === 'SMART WORKING' && !n.tuttaGiornata && (!n.oraInizio || P(n.oraInizio) >= 720)) {
+    await allineaSmartPomeridianoAEntrata(iso);
+  }
   if (swEvToSync && isGoogleConfigured()) {
     if (swEvToSync.googleId) await aggiornaEventoGoogle(swEvToSync);
     else await inviaEventoGoogle(swEvToSync);
