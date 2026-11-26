@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="it" data-ver="4.58">
+<html lang="it" data-ver="4.59">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -80,6 +80,29 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 @media(min-width:900px){#p-oggi.on{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}.pg.on:not(#p-oggi){max-width:720px;margin:0 auto}}
 @media(orientation:landscape) and (max-height:520px){.big b{font-size:1.8rem}.hero{padding:12px}}
 @media print{body *{visibility:hidden}#modalReport,#modalReport *{visibility:visible}#modalReport{position:absolute;inset:0;background:#fff}.noprint{display:none!important}}
+#boxVistaMeseAgenda{padding:10px;touch-action:pan-y;overflow:hidden}
+#agMeseGriglia{width:100%;max-width:100%;overflow:hidden}
+.ag-cal-head,.ag-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%}
+.ag-cal-head{text-align:center;font-weight:700;font-size:.75rem;color:var(--muted);margin-bottom:6px}
+.ag-cal-head>div{min-width:0;overflow:hidden}
+.ag-cal-cell{min-width:0;min-height:60px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px;display:flex;flex-direction:column;cursor:pointer;position:relative;overflow:hidden}
+.ag-cal-cell.empty{background:var(--bg);border-color:transparent;opacity:.3;cursor:default}
+.ag-cal-cell.today{border-color:var(--blue);box-shadow:0 0 0 1.5px var(--blue)}
+.ag-cal-num{font-size:.8rem;font-weight:700;color:var(--navy);margin-bottom:2px;line-height:1.1}
+.ag-cal-cell.today .ag-cal-num{color:var(--blue)}
+.ag-cal-items{display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden}
+.ag-cal-ev{font-size:.65rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--navy);padding:1px 3px;border-radius:3px;min-width:0}
+.ag-cal-more{font-size:.62rem;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-cal-todo{font-size:.62rem;color:#107c41;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:480px){
+  #boxVistaMeseAgenda{padding:6px 4px}
+  .ag-cal-head,.ag-cal-grid{gap:2px}
+  .ag-cal-head{font-size:.66rem;margin-bottom:4px}
+  .ag-cal-cell{min-height:52px;padding:2px;border-radius:5px}
+  .ag-cal-num{font-size:.72rem;margin-bottom:1px}
+  .ag-cal-ev{font-size:.58rem;padding:1px 2px}
+  .ag-cal-more,.ag-cal-todo{font-size:.56rem}
+}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -195,7 +218,7 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
   </div>
 
   <!-- Vista Mese a Griglia (Calendario mensile - default) -->
-  <div class="card" id="boxVistaMeseAgenda" style="padding:10px">
+  <div class="card" id="boxVistaMeseAgenda">
     <div id="agMeseGriglia"></div>
   </div>
 
@@ -578,7 +601,7 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 
 <div id="toast" role="status"></div>
 <footer id="ver" style="text-align:center;font-size:.72rem;margin-top:18px"></footer>
-<script src="seed.js?v=4.58"></script><script src="calculator.js?v=4.58"></script><script src="app.js?v=4.58"></script><script type="module" src="firebase-sync.js?v=4.58"></script>
+<script src="seed.js?v=4.59"></script><script src="calculator.js?v=4.59"></script><script src="app.js?v=4.59"></script><script type="module" src="firebase-sync.js?v=4.59"></script>
 <!-- Modal Chiusura Aziendale -->
 <div class="modal" id="modalChiusura">
   <div class="modal-content">
