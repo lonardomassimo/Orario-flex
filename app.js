@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.52', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.53', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -39,25 +39,31 @@ function normalizzaGiustificativiStorici() {
     }
   });
 }
+function pulisciCacheLocaleDati() {
+  try {
+    ['cronoflex_v4', 'orario_flex_timbrature', 'orario_flex_giustificativi', 'orario_flex_destinazioni', 'orario_flex_puntozero', 'cf_local_updated_ms']
+      .forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+}
 function load() {
-  const raw = localStorage.getItem(KEY), old = k => JSON.parse(localStorage.getItem(k) || 'null');
-  if (raw) S = Object.assign(VUOTO(), JSON.parse(raw));
-  else {
-    S.t = old('orario_flex_timbrature') || [];
-    S.g = old('orario_flex_giustificativi') || [];
-    S.d = old('orario_flex_destinazioni') || {};
-    S.pz = old('orario_flex_puntozero');
-  }
-
+  // Modalità Cloud-Only: i dati risiedono esclusivamente su Firebase Cloud, mai in localStorage
+  S = VUOTO();
+  pulisciCacheLocaleDati();
   normalizzaGiustificativiStorici();
   applicaParametri();
   allineaImpegniReperibilita();
   invalidaCacheStato();
-  save();
 }
 
-const save = () => localStorage.setItem(KEY, JSON.stringify(S));
-function mut(fn) { undoStack.push(JSON.stringify(S)); if (undoStack.length > 30) undoStack.shift(); fn(); invalidaCacheStato(); localStorage.setItem('cf_local_updated_ms', String(Date.now())); save(); refresh(); if (typeof triggerAutoSyncCloud === 'function') triggerAutoSyncCloud(); }
+const save = () => {};
+function mut(fn) {
+  undoStack.push(JSON.stringify(S));
+  if (undoStack.length > 30) undoStack.shift();
+  fn();
+  invalidaCacheStato();
+  refresh();
+  if (typeof triggerAutoSyncCloud === 'function') triggerAutoSyncCloud();
+}
 window.__cfGetState = () => S;
 window.__cfApplyCloudState = (remoteS, remoteMs) => {
   S = Object.assign(VUOTO(), remoteS);
@@ -66,20 +72,18 @@ window.__cfApplyCloudState = (remoteS, remoteMs) => {
   applicaParametri();
   allineaImpegniReperibilita();
   riallineaConfigGoogleDaCloud();
-  if (remoteMs) localStorage.setItem('cf_local_updated_ms', String(remoteMs));
-  save();
+  pulisciCacheLocaleDati();
   refresh();
 };
 window.__cfResetLocalState = () => {
   S = VUOTO();
   invalidaCacheStato();
   applicaParametri();
-  localStorage.removeItem('cf_local_updated_ms');
-  save();
+  pulisciCacheLocaleDati();
   refresh();
 };
 window.__cfOpenModal = id => { const e = $(id); if (e) e.classList.add('active'); };
-function annulla() { if (!undoStack.length) return toast('Nessuna operazione da annullare'); S = JSON.parse(undoStack.pop()); invalidaCacheStato(); save(); refresh(); toast('Ultima operazione annullata'); }
+function annulla() { if (!undoStack.length) return toast('Nessuna operazione da annullare'); S = JSON.parse(undoStack.pop()); invalidaCacheStato(); refresh(); if (typeof triggerAutoSyncCloud === 'function') triggerAutoSyncCloud(); toast('Ultima operazione annullata'); }
 function toast(m) { const e = $('toast'); e.textContent = m; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 5000); }
 const bloccato = iso => { if (S.ver[iso.slice(0, 7)]) { toast('Mese verificato: sbloccalo dal Riepilogo per modificarlo'); return true; } return false; };
 
@@ -2179,6 +2183,7 @@ function importaDati() {
       const n = d.S || { t: d.timbrature, g: d.giustificativi, d: d.destinazioni || {}, pz: d.puntoZero || null };
       if (!n.t || !n.g) return alert('File di backup non valido.');
       let aggT = 0, aggG = 0;
+      if (!merge) window.__cfAllowShrinkWrite = true;
       mut(() => {
         if (merge) {
           S.t = S.t || []; S.g = S.g || []; S.d = S.d || {};
