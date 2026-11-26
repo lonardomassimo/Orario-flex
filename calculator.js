@@ -558,13 +558,13 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   let valoreProssimoScatto = 0;
 
   if (nowMinutes !== null && entrataNormMin !== null && ultimaUscitaMin === null) {
-    if (eccedenzaNettaMin < PARAMETRI.scattoMinimoStraordinario) {
-      minutiAlProssimoScatto = PARAMETRI.scattoMinimoStraordinario - eccedenzaNettaMin;
+    if (eccedenzaGrezzaMin < PARAMETRI.scattoMinimoStraordinario) {
+      minutiAlProssimoScatto = PARAMETRI.scattoMinimoStraordinario - eccedenzaGrezzaMin;
       valoreProssimoScatto = PARAMETRI.scattoMinimoStraordinario;
       orarioProssimoScatto = nowMinutes + minutiAlProssimoScatto;
     } else {
       const step = PARAMETRI.scattoSuccessivoStraordinario;
-      const residuoScatto = eccedenzaNettaMin % step;
+      const residuoScatto = eccedenzaGrezzaMin % step;
       minutiAlProssimoScatto = (residuoScatto === 0) ? step : (step - residuoScatto);
       valoreProssimoScatto = straordinarioNettoMin + step;
       orarioProssimoScatto = nowMinutes + minutiAlProssimoScatto;
