@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.58', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.59', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -582,6 +582,32 @@ function initSwipeOggi() {
     const dt = Date.now() - startT;
     if (dt < 700 && Math.abs(dx) >= 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       cambiaGiorno(dx > 0 ? -1 : 1);
+    }
+  }, { passive: true });
+}
+
+function initSwipeAgenda() {
+  const el = $('p-agenda');
+  if (!el || el.dataset.swipeInit) return;
+  el.dataset.swipeInit = '1';
+  let startX = 0, startY = 0, startT = 0, active = false;
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) { active = false; return; }
+    if (document.querySelector('.modal.active') || ($('drawer') && $('drawer').classList.contains('open'))) { active = false; return; }
+    if (e.target && e.target.closest('input, select, textarea, button, a, label')) { active = false; return; }
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    startT = Date.now();
+    active = true;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (!active || e.changedTouches.length !== 1) return;
+    active = false;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    const dt = Date.now() - startT;
+    if (dt < 700 && Math.abs(dx) >= 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      navMese(dx > 0 ? -1 : 1);
     }
   }, { passive: true });
 }
@@ -2276,6 +2302,7 @@ window.onload = () => {
   } catch (e) {}
   pagina(targetPag);
   initSwipeOggi();
+  initSwipeAgenda();
   apriDaHash(); const hv = document.documentElement.dataset.ver, ok = hv === APP_VERSION;
   $('ver').textContent = ok ? `Cronoflex v${APP_VERSION} · by arch. Lonardo Massimo` : `File non allineati (pagina ${hv}, logica ${APP_VERSION}): usa "Forza aggiornamento" dal menu`; $('ver').style.color = ok ? 'var(--muted)' : 'var(--danger)';
   controlli(); setInterval(() => { controlli(); if (pagina.cur === 'oggi') aggiornaSchermataOggi(); }, 30000);
@@ -5188,15 +5215,15 @@ function renderVistaMeseGriglia(ym) {
   const primoGiorno = new Date(y, m - 1, 1).getDay(); // 0 = dom, 1 = lun...
   const offset = (primoGiorno === 0 ? 6 : primoGiorno - 1); // Lunedì = 0
 
-  let html = `<div style="display:grid;grid-template-columns:repeat(7, 1fr);gap:4px;text-align:center;font-weight:700;font-size:0.75rem;color:var(--muted);margin-bottom:6px">
+  let html = `<div class="ag-cal-head">
     <div>LUN</div><div>MAR</div><div>MER</div><div>GIO</div><div>VEN</div><div style="color:var(--danger)">SAB</div><div style="color:var(--danger)">DOM</div>
   </div>`;
 
-  html += `<div style="display:grid;grid-template-columns:repeat(7, 1fr);gap:4px">`;
+  html += `<div class="ag-cal-grid">`;
 
   // Spazi vuoti prima del primo giorno
   for (let i = 0; i < offset; i++) {
-    html += `<div style="min-height:60px;background:var(--bg);border-radius:6px;opacity:0.3"></div>`;
+    html += `<div class="ag-cal-cell empty"></div>`;
   }
 
   // Giorni del mese
@@ -5206,17 +5233,17 @@ function renderVistaMeseGriglia(ym) {
     const todoGiorno = (S.todo || []).filter(t => t.data === iso);
     const isOggi = iso === todayISO();
 
-    html += `<div onclick="currentDate=D('${iso}');pagina('oggi')" style="min-height:60px;background:#fff;border:1px solid ${isOggi ? 'var(--blue)' : 'var(--line)'};border-radius:6px;padding:4px;display:flex;flex-direction:column;cursor:pointer;position:relative;${isOggi ? 'box-shadow:0 0 0 1.5px var(--blue)' : ''}">
-      <div style="font-size:0.8rem;font-weight:700;color:${isOggi ? 'var(--blue)' : 'var(--navy)'};margin-bottom:2px">${d}</div>
-      <div style="display:flex;flex-direction:column;gap:2px;overflow:hidden">
+    html += `<div onclick="currentDate=D('${iso}');pagina('oggi')" class="ag-cal-cell${isOggi ? ' today' : ''}">
+      <div class="ag-cal-num">${d}</div>
+      <div class="ag-cal-items">
         ${evGiorno.slice(0, 2).map(e => {
           const done = isEvConcluso(e, iso);
           const col = e.googleCalColor || '#1f8fd0';
           const oraCell = (iso === e.data && e.ora) ? (e.ora + ' ') : '';
-          return `<div style="font-size:0.65rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${ isMultiGiorno(e) ? 'rgba(31,143,208,0.18)' : 'rgba(31,143,208,0.10)' };border-left:2.5px solid ${escHtml(col)};color:var(--navy);padding:1px 3px;border-radius:3px;${done ? 'text-decoration:line-through;opacity:0.6' : ''}">${escHtml(oraCell + e.titolo)}</div>`;
+          return `<div class="ag-cal-ev" style="background:${ isMultiGiorno(e) ? 'rgba(31,143,208,0.18)' : 'rgba(31,143,208,0.10)' };border-left:2.5px solid ${escHtml(col)};${done ? 'text-decoration:line-through;opacity:0.6' : ''}">${escHtml(oraCell + e.titolo)}</div>`;
         }).join('')}
-        ${evGiorno.length > 2 ? `<div style="font-size:0.62rem;color:var(--muted);font-weight:700">+${evGiorno.length - 2} altri</div>` : ''}
-        ${todoGiorno.length ? `<div style="font-size:0.62rem;color:#107c41;font-weight:700">✓ ${todoGiorno.filter(x=>x.fatto).length}/${todoGiorno.length}</div>` : ''}
+        ${evGiorno.length > 2 ? `<div class="ag-cal-more">+${evGiorno.length - 2} altri</div>` : ''}
+        ${todoGiorno.length ? `<div class="ag-cal-todo">✓ ${todoGiorno.filter(x=>x.fatto).length}/${todoGiorno.length}</div>` : ''}
       </div>
     </div>`;
   }
