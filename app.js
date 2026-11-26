@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.55', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.56', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
