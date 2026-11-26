@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.56', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.57', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -21,7 +21,17 @@ function formatExcelDate(s) {
   if (!s || s.includes('-')) return s || '';
   const p = s.toLowerCase().split(' '); return p.length >= 4 ? `${p[3]}-${String(MESI.indexOf(p[2]) + 1).padStart(2, '0')}-${p[1].padStart(2, '0')}` : s;
 }
+function normalizzaOrariStorici() {
+  if (!Array.isArray(S.t)) return;
+  S.t.forEach(t => {
+    if (t && typeof t.ora === 'string') {
+      const s = t.ora.trim();
+      if (/^\d:\d{2}$/.test(s)) t.ora = '0' + s;
+    }
+  });
+}
 function normalizzaGiustificativiStorici() {
+  normalizzaOrariStorici();
   if (!Array.isArray(S.g)) return;
   S.g.forEach(g => {
     if (g.data === '2025-03-17') g.data = '2026-03-17';
