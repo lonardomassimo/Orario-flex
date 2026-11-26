@@ -169,8 +169,8 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
       if (!g.tuttaGiornata && dur > 0 && dur % 15 !== 0 && g.tipo !== 'VISITA MEDICA') {
         dur = Math.ceil(dur / 15) * 15;
       }
-      // Tetto rigido 4h (240 min) per Smart Working di mezza giornata
-      if (g.tipo === 'SMART WORKING' && !g.tuttaGiornata && dur > 240) {
+      // Tetto rigido 4h (240 min) per Smart Working di mezza giornata (salvo eccezioni storiche Inaz)
+      if (g.tipo === 'SMART WORKING' && !g.tuttaGiornata && !g.eccezioneSwInaz && dur > 240) {
         dur = 240;
       }
 
@@ -199,6 +199,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
 
   const swGiusts = giustificativiGiorno.filter(g => g.tipo === 'SMART WORKING');
   const swFullDay = swGiusts.some(g => g.tuttaGiornata);
+  const hasEccezioneSwInaz = swGiusts.some(g => g.eccezioneSwInaz);
   const isSwMattina = !swFullDay && smartWorkingMin > 0 && (
     swGiusts.some(g => { const ini = parseTimeToMinutes(g.oraInizio); return ini !== null && ini < (12 * 60 + 15); }) ||
     (entrataNormMin !== null && entrataNormMin >= (12 * 60 + 15))
@@ -385,7 +386,6 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
       if (eccessoVen > 0 && eccessoVen < PARAMETRI.scattoMinimoStraordinario) {
         oreLavorateMin = oreDovute;
         uscitaConteggiataMin = entrataNormMin + oreDovute;
-        attenzioni.push(`Venerdì: ${eccessoVen} min oltre le 6 ore non riconosciuti (arrotondato per difetto a 6h, nessuna pausa detratta)`);
       } else {
         oreLavorateMin = lavoroGrezzoMin;
         uscitaConteggiataMin = ultimaUscitaMin;
@@ -398,7 +398,9 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
       oreLavorateMin = Math.floor(lavSedeGrezzo / 15) * 15;
       uscitaConteggiataMin = entrataNormMin + oreLavorateMin;
       const targetTotale = oreDovute > 0 ? oreDovute : 480;
-      if (oreLavorateMin + smartWorkingMin > targetTotale) {
+      if (hasEccezioneSwInaz) {
+        oreLavorateMin = Math.min(oreLavorateMin, Math.max(0, targetTotale - smartWorkingMin));
+      } else if (oreLavorateMin + smartWorkingMin > targetTotale) {
         smartWorkingMin = Math.max(0, targetTotale - oreLavorateMin);
         oreGiustificateMin = smartWorkingMin;
         giustPerTipo['SMART WORKING'] = smartWorkingMin;
