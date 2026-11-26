@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="it" data-ver="4.49">
+<html lang="it" data-ver="4.50">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -438,12 +438,25 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
       <button class="btn sec" style="padding:7px 12px" onclick="apriPZ()">Imposta</button>
     </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;border:1px solid var(--line)">
-      <div>
-        <b>🔔 Notifiche di promemoria</b>
-        <div style="font-size:0.8rem;color:var(--muted)">Attiva le notifiche push per avvisi di uscita, pausa e appuntamenti.</div>
+    <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--line)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div>
+          <b>🔔 Notifiche di promemoria</b> <span id="notifStatusBadge" class="bd" style="margin-left:4px;font-size:.7rem"></span>
+          <div style="font-size:0.8rem;color:var(--muted)">Ingresso, pausa, riepilogo To-Do di fine giornata, impegni (-30') e reperibilità.</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn sec" style="padding:7px 12px" onclick="abilitaNotifiche()">Attiva</button>
+          <button class="btn sec" style="padding:7px 10px" onclick="testaNotifica()" title="Invia una notifica di prova">Testa</button>
+        </div>
       </div>
-      <button class="btn sec" style="padding:7px 12px" onclick="abilitaNotifiche()">Attiva</button>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:0.78rem">
+        <label class="chk" style="margin:0"><input type="checkbox" id="nCfgIngresso" onchange="salvaNotifCfg()"> Timbratura ingresso</label>
+        <label class="chk" style="margin:0"><input type="checkbox" id="nCfgPausa" onchange="salvaNotifCfg()"> Inizio/fine pausa</label>
+        <label class="chk" style="margin:0"><input type="checkbox" id="nCfgUscitaTodo" onchange="salvaNotifCfg()"> Fine giornata &amp; To-Do</label>
+        <label class="chk" style="margin:0"><input type="checkbox" id="nCfgImpegni" onchange="salvaNotifCfg()"> Impegni (-30 min)</label>
+        <label class="chk" style="margin:0"><input type="checkbox" id="nCfgReperibilita" onchange="salvaNotifCfg()"> Reperibilità (giorno prec.)</label>
+      </div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:6px">Su PWA le notifiche sono attive con app aperta/in background; per avvisi a schermo spento è previsto il modulo Android (L6).</div>
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;border:1px solid var(--line)">
@@ -454,20 +467,12 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
       <button class="btn sec" style="padding:7px 12px" onclick="apriModalOutlook()">Gestisci</button>
     </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:rgba(16,124,65,0.03)">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;border:1px solid rgba(16,124,65,0.2);background:rgba(16,124,65,0.03)">
       <div>
         <b style="color:#107c41">☁️ Account e Sincronizzazione Cloud</b>
         <div style="font-size:0.8rem;color:var(--muted)">Accedi con Google o Email/Password per sincronizzare in privato PC e smartphone.</div>
       </div>
       <button class="btn main" style="background:#107c41;border-color:#107c41;padding:7px 12px" onclick="apriModalSyncCloud()">Gestisci</button>
-    </div>
-
-    <div id="boxImportInazOpzioni" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;border:1px solid #c7d2fe;background:rgba(79,70,229,0.04)">
-      <div>
-        <b style="color:var(--brand)">📥 Dati storici Inaz (Marzo - Ottobre 2026)</b>
-        <div style="font-size:0.8rem;color:var(--muted)">436 timbrature e 60 giustificativi ufficiali estratti dal portale Inaz.</div>
-      </div>
-      <button class="btn main" style="padding:7px 12px;white-space:nowrap" onclick="caricaDatiStoriciInaz()">Importa dati</button>
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;border:1px solid var(--line)">
@@ -565,19 +570,15 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 
 <div class="modal" id="modalSync"><div class="sheet"><h3>Backup e ripristino</h3><p class="note" style="margin:0 0 12px">I dati restano nel browser: scarica un backup per spostarli tra PC e telefono.</p>
   <button class="btn main" style="width:100%" onclick="esportaDati()">Scarica backup</button>
-  <div id="boxImportInazSync" style="margin:14px 0;padding:10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)">
-    <div style="font-weight:600;font-size:0.88rem;margin-bottom:4px">Dati storici Inaz (01/03/2026 - 31/10/2026)</div>
-    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">436 timbrature e 60 giustificativi verificati al 100% con il portale Inaz.</div>
-    <button class="btn sec" style="width:100%;font-weight:600" onclick="caricaDatiStoriciInaz()">📥 Ricarica timbrature storiche Inaz</button>
-  </div>
   <div class="f" style="margin-top:14px"><label>Ripristina da file</label><input type="file" id="fileImport" accept=".json"></div>
+  <label class="chk" style="margin-top:8px"><input type="checkbox" id="chkMergeImport"> Unisci ai dati attuali (senza sovrascrivere i giorni già presenti)</label>
   <div class="foot"><button class="btn" onclick="importaDati()">Ripristina</button><button class="btn" onclick="chiudiModal('modalSync')">Chiudi</button></div></div></div>
 
 <div class="modal" id="modalReport"><div class="sheet" style="max-width:560px"><div id="reportBody"></div><div class="foot noprint"><button class="btn main" onclick="window.print()">Stampa / salva PDF</button><button class="btn" onclick="chiudiModal('modalReport')">Chiudi</button></div></div></div>
 
 <div id="toast" role="status"></div>
 <footer id="ver" style="text-align:center;font-size:.72rem;margin-top:18px"></footer>
-<script src="seed.js?v=4.49"></script><script src="calculator.js?v=4.49"></script><script src="app.js?v=4.49"></script><script type="module" src="firebase-sync.js?v=4.49"></script>
+<script src="seed.js?v=4.50"></script><script src="calculator.js?v=4.50"></script><script src="app.js?v=4.50"></script><script type="module" src="firebase-sync.js?v=4.50"></script>
 <!-- Modal Chiusura Aziendale -->
 <div class="modal" id="modalChiusura">
   <div class="modal-content">
