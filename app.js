@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.66', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.67', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -676,26 +676,59 @@ function initSwipeAgenda() {
   const el = $('p-agenda');
   if (!el || el.dataset.swipeInit) return;
   el.dataset.swipeInit = '1';
-  let startX = 0, startY = 0, startT = 0, active = false;
+  let startX = 0, startY = 0, lastX = 0, lastY = 0, startT = 0, active = false, justSwiped = false;
+  const finishSwipe = (endX, endY) => {
+    if (!active) return;
+    active = false;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const dt = Date.now() - startT;
+    if (dt < 1200 && Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+      justSwiped = true;
+      setTimeout(() => { justSwiped = false; }, 350);
+      navMese(dx > 0 ? -1 : 1);
+    }
+  };
   el.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) { active = false; return; }
     if (document.querySelector('.modal.active') || ($('drawer') && $('drawer').classList.contains('open'))) { active = false; return; }
     if (e.target && e.target.closest('input, select, textarea, button, a, label')) { active = false; return; }
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
+    startX = lastX = e.touches[0].clientX;
+    startY = lastY = e.touches[0].clientY;
     startT = Date.now();
     active = true;
   }, { passive: true });
+  el.addEventListener('touchmove', e => {
+    if (!active || e.touches.length !== 1) return;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+  }, { passive: true });
   el.addEventListener('touchend', e => {
     if (!active || e.changedTouches.length !== 1) return;
-    active = false;
-    const dx = e.changedTouches[0].clientX - startX;
-    const dy = e.changedTouches[0].clientY - startY;
-    const dt = Date.now() - startT;
-    if (dt < 700 && Math.abs(dx) >= 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      navMese(dx > 0 ? -1 : 1);
-    }
+    finishSwipe(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
   }, { passive: true });
+  el.addEventListener('touchcancel', () => {
+    finishSwipe(lastX, lastY);
+  }, { passive: true });
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (document.querySelector('.modal.active') || ($('drawer') && $('drawer').classList.contains('open'))) return;
+    if (e.target && e.target.closest('input, select, textarea, button, a, label')) return;
+    startX = lastX = e.clientX;
+    startY = lastY = e.clientY;
+    startT = Date.now();
+    active = true;
+  });
+  el.addEventListener('mouseup', e => {
+    if (!active) return;
+    finishSwipe(e.clientX, e.clientY);
+  });
+  el.addEventListener('click', e => {
+    if (justSwiped) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
 }
 
 // Agenda, attività, cose da fare (con supporto eventi multi-giorno e modifica/sync bidirezionale)
@@ -5363,6 +5396,7 @@ function setVistaAgenda(v) {
     if (btnM) btnM.classList.remove('on');
     if (boxE) boxE.style.display = 'block';
     if (boxM) boxM.style.display = 'none';
+    if ($('agList') && !$('agList').children.length) caricaAgenda();
   }
 }
 
