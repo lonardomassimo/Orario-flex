@@ -41,7 +41,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 const CLIENT_WRITER_ID = 'w_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
-const CLOUD_VER = '4.58';
+const CLOUD_VER = '4.70';
 
 let currentUser = null;
 let unsubscribeSnapshot = null;
@@ -468,7 +468,7 @@ function attivaListenerRealtime(user) {
     if (!data || !data.stateJson || data.writerId === CLIENT_WRITER_ID) return;
     if (data.stateJson.indexOf('"_initialAttSeed":true') !== -1) return;
     const remoteMs = Number(data.updatedAtMs) || 0;
-    if (remoteMs >= lastAppliedCloudMs) {
+    if (remoteMs > lastAppliedCloudMs) {
       try {
         const remoteState = JSON.parse(data.stateJson);
         if (typeof window.__cfApplyCloudState === 'function') {
