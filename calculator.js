@@ -245,6 +245,10 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
           dur = Math.max(0, dur - PARAMETRI.pausaMinimaMinuti);
         }
       }
+      // Se eccezioneSwInaz è attiva su SW parziale, usa sempre l'intera fascia oraria effettiva
+      if (g.tipo === 'SMART WORKING' && g.eccezioneSwInaz && !g.tuttaGiornata && iniRaw !== null && finRaw !== null && finRaw > iniRaw) {
+        dur = Math.max(dur, finRaw - iniRaw);
+      }
 
       // Arrotondamento a scatti di 15 min per assenze brevi se non intera giornata (es. RST 17:19-17:25 -> 15 min, FER 14:00-14:58 -> 45 min)
       if (!g.tuttaGiornata && dur > 0 && dur % 15 !== 0 && g.tipo !== 'VISITA MEDICA') {
