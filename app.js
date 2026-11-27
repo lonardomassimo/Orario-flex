@@ -1,12 +1,11 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.69', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.70';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
 const TIPI_DURATA = ['FERIE', 'EX-FESTIVITÀ', 'ORE RECUPERO', 'MALATTIA', 'SMART WORKING', 'ORE 4 NOVEMBRE', 'CONGEDO PARENTALE', 'DONAZIONE SANGUE', 'PERMESSO NON RETRIBUITO'];
 const LIMITI = { 'EX-FESTIVITÀ': 30 * 60, 'VISITA MEDICA': 30 * 60 }, FERIE_ANNO = 168 * 60, SW_SETT = 480;
 const PZ_KEY = { 'FERIE': 'ferie', 'EX-FESTIVITÀ': 'ex', 'VISITA MEDICA': 'visite', 'MALATTIA': 'malattia', 'ORE 4 NOVEMBRE': 'nov4', 'ORE RECUPERO': 'rec' };
-const CATEGORIE = ['Manutenzione ordinaria AGESP', 'Manutenzione straordinaria AGESP', 'Manutenzione ordinaria Comune', 'Manutenzione straordinaria Comune'];
 const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
 const isRecupero = t => t === 'ORE RECUPERO' || t === 'ORE RECUPERO STRAORDINARI';
 const svg = p => `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
@@ -65,7 +64,15 @@ function load() {
   invalidaCacheStato();
 }
 
-const save = () => {};
+function accodaEliminazioneGoogle(googleId, calId) {
+  if (!googleId || !isGoogleConfigured()) return false;
+  S.gcal = S.gcal || { connected: true, email: getGooglePrimaryEmail(), selectedCals: getGoogleSelectedCalendars(), calCache: [], dismissedIds: [], pendingDeletes: [] };
+  S.gcal.pendingDeletes = S.gcal.pendingDeletes || [];
+  if (!S.gcal.pendingDeletes.some(d => d.googleId === googleId)) {
+    S.gcal.pendingDeletes.push({ googleId, calId: calId || getWritableSelectedGoogleCalendars()[0] || 'primary' });
+  }
+  return true;
+}
 function mut(fn) {
   undoStack.push(JSON.stringify(S));
   if (undoStack.length > 30) undoStack.shift();
@@ -101,13 +108,8 @@ const bloccato = iso => { if (S.ver[iso.slice(0, 7)]) { toast('Mese verificato: 
 // ---------- Calendario: riposo e festivi ----------
 function festivi(y) {
   if (festivi.c[y]) return festivi.c[y];
-  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const pq = iso0(new Date(y, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 2));
-  const fissi = ['01-01', '01-06', '04-25', '05-01', '06-02', '08-15', '11-01', '12-08', '12-25', '12-26'];
-  const sp = (typeof PARAMETRI !== 'undefined' && PARAMETRI.santoPatrono !== undefined) ? PARAMETRI.santoPatrono : '06-24';
-  if (sp) fissi.push(sp);
-  String((typeof PARAMETRI !== 'undefined' && PARAMETRI.festiviExtra) || '').split(',').map(s => s.trim()).filter(s => /^\d{2}-\d{2}$/.test(s)).forEach(s => fissi.push(s));
-  return festivi.c[y] = new Set(fissi.map(x => y + '-' + x).concat(pq));
+  const mmddSet = getFestiviAnno(y);
+  return festivi.c[y] = new Set([...mmddSet].map(mmdd => `${y}-${mmdd}`));
 }
 festivi.c = {};
 // Parsing data ricorrente "GG/MM" (o "GG-MM") -> "MM-DD"; '' se vuota, null se non valida
@@ -257,24 +259,8 @@ function residuo(tipo, iso) {
   if (tipo === 'ORE RECUPERO') return bancaRip(y) + sommaBan(y, d => d <= iso) - usatoAnno(tipo, y);
   return LIMITI[tipo] === undefined ? null : LIMITI[tipo] - usatoAnno(tipo, y);
 }
-const ticketGiorno = d => calcDay(d).oreLavorateMin + gDay(d).filter(g => g.tipo === 'SMART WORKING').reduce((a, g) => a + uso(g), 0) >= 240;
-const isTipoEntrata = t => t === 'E' || t === 'E PAUSA' || t === 'E VISITA MEDICA';
-const isTipoUscita = t => t === 'U' || t === 'U PAUSA' || t === 'U VISITA MEDICA';
-function estraiPassaggi(tG) {
-  const ord = [...(tG || [])].sort((a, b) => (P(a.ora) || 0) - (P(b.ora) || 0));
-  const entrateRaw = ord.filter(t => isTipoEntrata(t.tipo));
-  const entrate = [];
-  for (const e of entrateRaw) {
-    const prev = entrate[entrate.length - 1];
-    if (prev && Math.abs((P(e.ora) || 0) - (P(prev.ora) || 0)) <= 1 && (prev.tipo === 'E' || e.tipo === 'E')) {
-      if (prev.tipo !== 'E' && e.tipo === 'E') entrate[entrate.length - 1] = e;
-      continue;
-    }
-    entrate.push(e);
-  }
-  const uscite = ord.filter(t => isTipoUscita(t.tipo));
-  return { ord, entrate, uscite };
-}
+const ticketGiorno = d => !!calcDay(d).ticket;
+const estraiPassaggi = tG => estraiPassaggiGiorno(tG || []);
 const pausaRaw = tG => {
   const { entrate, uscite } = estraiPassaggi(tG);
   if (entrate.length >= 2 && uscite.length >= 1) {
@@ -611,14 +597,7 @@ async function eliminaGiust(i) {
       const linked = S.ev.filter(e => (g.id && e.giustId === g.id) || (!g.id && e.data === g.data && e.titolo === '💻 Smart Working'));
       if (linked.length) {
         linked.forEach(ev => {
-          if (ev.googleId && isGoogleConfigured()) {
-            S.gcal = S.gcal || { connected: true, email: getGooglePrimaryEmail(), selectedCals: getGoogleSelectedCalendars(), calCache: [], dismissedIds: [], pendingDeletes: [] };
-            S.gcal.pendingDeletes = S.gcal.pendingDeletes || [];
-            if (!S.gcal.pendingDeletes.some(d => d.googleId === ev.googleId)) {
-              S.gcal.pendingDeletes.push({ googleId: ev.googleId, calId: ev.googleCalId || getWritableSelectedGoogleCalendars()[0] || 'primary' });
-              hasGoogleDel = true;
-            }
-          }
+          if (accodaEliminazioneGoogle(ev.googleId, ev.googleCalId)) hasGoogleDel = true;
         });
         const linkedIds = new Set(linked.map(e => e.id));
         S.ev = S.ev.filter(e => !linkedIds.has(e.id));
@@ -962,7 +941,6 @@ async function salvaEv() {
 
   if (syncEsterno) {
     if (isGoogleConfigured()) await inviaEventoGoogle(newEv);
-    inviaEventoM365(newEv);
   }
   toast('Impegno salvato! ✓');
 }
@@ -977,13 +955,7 @@ async function delEv(id) {
   const gCal = target.googleCalId || getWritableSelectedGoogleCalendars()[0] || 'primary';
 
   mut(() => {
-    if (gId && isGoogleConfigured()) {
-      S.gcal = S.gcal || { connected: true, email: getGooglePrimaryEmail(), selectedCals: getGoogleSelectedCalendars(), calCache: [], dismissedIds: [], pendingDeletes: [] };
-      S.gcal.pendingDeletes = S.gcal.pendingDeletes || [];
-      if (!S.gcal.pendingDeletes.some(d => d.googleId === gId)) {
-        S.gcal.pendingDeletes.push({ googleId: gId, calId: gCal });
-      }
-    }
+    accodaEliminazioneGoogle(gId, gCal);
     if (target.repId) {
       S.rep = S.rep.filter(r => r.id !== target.repId && r.evId !== id);
     } else {
@@ -1001,8 +973,6 @@ async function delEv(id) {
     }
   }
 }
-function renderAttivita(iso) { const l = S.att[iso] || []; $('attList').innerHTML = l.length ? l.map((a, i) => `<div class="tl"><span class="nm"><b>${a.cat}</b>${a.note ? `<br><small>${a.note}</small>` : ''}</span><button class="ib d" onclick="delAtt(${i})" aria-label="Elimina">${IC.bin}</button></div>`).join('') : '<div class="empty">Nessuna attività registrata</div>'; }
-function addAtt() { const iso = iso0(currentDate); if (bloccato(iso)) return; const n = $('attNote').value.trim(); mut(() => (S.att[iso] = S.att[iso] || []).push({ cat: $('attCat').value, note: n })); $('attNote').value = ''; }
 const delAtt = i => { const iso = iso0(currentDate); if (!bloccato(iso)) mut(() => S.att[iso].splice(i, 1)); };
 function isGiornoLavorativoEffettivo(iso) {
   return lavorativo(iso) && !(S.chiusure || []).some(c => c.data === iso);
@@ -1530,14 +1500,7 @@ async function salvaGiustificativo() {
       const linked = S.ev.filter(e => (prevG.id && e.giustId === prevG.id) || (!prevG.id && e.data === prevG.data && e.titolo === '💻 Smart Working'));
       if (linked.length) {
         linked.forEach(ev => {
-          if (ev.googleId && isGoogleConfigured()) {
-            S.gcal = S.gcal || { connected: true, email: getGooglePrimaryEmail(), selectedCals: getGoogleSelectedCalendars(), calCache: [], dismissedIds: [], pendingDeletes: [] };
-            S.gcal.pendingDeletes = S.gcal.pendingDeletes || [];
-            if (!S.gcal.pendingDeletes.some(d => d.googleId === ev.googleId)) {
-              S.gcal.pendingDeletes.push({ googleId: ev.googleId, calId: ev.googleCalId || chosenCal });
-              swNeedsDelete = true;
-            }
-          }
+          if (accodaEliminazioneGoogle(ev.googleId, ev.googleCalId || chosenCal)) swNeedsDelete = true;
         });
         const linkedIds = new Set(linked.map(e => e.id));
         S.ev = S.ev.filter(e => !linkedIds.has(e.id));
@@ -1562,9 +1525,7 @@ async function salvaGiustificativo() {
 }
 
 // ---------- Storico ----------
-let dataSceltaVuoto = null;
 function apriSceltaVuoto(iso) {
-  dataSceltaVuoto = iso;
   currentDate = D(iso);
   const elData = document.getElementById('sceltaVuotoData');
   if (elData) {
@@ -1755,24 +1716,34 @@ function caricaStorico() {
       details.open = true;
       storicoOpenMesi.add(ym);
     }
+    const contentDiv = document.createElement('div');
+    contentDiv.style.marginTop = '12px';
+
+    const renderMeseBody = () => {
+      if (contentDiv.dataset.rendered === '1') return;
+      contentDiv.dataset.rendered = '1';
+      giorniMese.forEach(d => {
+        contentDiv.appendChild(renderGiornoStorico(d));
+      });
+    };
+
+    if (details.open) {
+      renderMeseBody();
+    }
     details.addEventListener('toggle', () => {
       storicoOpenInit = true;
-      if (details.open) storicoOpenMesi.add(ym);
-      else storicoOpenMesi.delete(ym);
+      if (details.open) {
+        storicoOpenMesi.add(ym);
+        renderMeseBody();
+      } else {
+        storicoOpenMesi.delete(ym);
+      }
     });
 
     const summary = document.createElement('summary');
     summary.style.cssText = 'cursor:pointer;font-weight:700;display:flex;justify-content:space-between;align-items:center;padding:6px 0;user-select:none;color:var(--navy);font-size:1.05rem;';
     summary.innerHTML = `<span>📅 ${nomeMese}</span><span style="font-size:.78rem;font-weight:600;color:var(--muted);background:var(--line);padding:2px 8px;border-radius:10px;">${countDati} gg con dati</span>`;
     details.appendChild(summary);
-
-    const contentDiv = document.createElement('div');
-    contentDiv.style.marginTop = '12px';
-
-    giorniMese.forEach(d => {
-      contentDiv.appendChild(renderGiornoStorico(d));
-    });
-
     details.appendChild(contentDiv);
     box.appendChild(details);
   });
@@ -1875,28 +1846,30 @@ function caricaAgenda() {
   const numG = ultimoMese(rie.y, rie.m);
   const ymStart = `${ym}-01`, ymEnd = `${ym}-${String(numG).padStart(2, '0')}`;
 
-  // 1. Render Appuntamenti (espandendo gli eventi multi-giorno su tutti i giorni coperti nel mese)
-  const occorrenze = [];
-  S.ev.forEach(e => {
-    const fine = evFine(e);
-    if (fine < ymStart || e.data > ymEnd) return;
-    const dCur = D(e.data < ymStart ? ymStart : e.data);
-    const dLim = D(fine > ymEnd ? ymEnd : fine);
-    while (dCur <= dLim) {
-      const dIso = iso0(dCur);
-      const sortTime = (dIso === e.data ? (e.ora || '00:00') : '00:00');
-      occorrenze.push({ iso: dIso, sortKey: dIso + sortTime, ev: e });
-      dCur.setDate(dCur.getDate() + 1);
-    }
-  });
-  occorrenze.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  // 1. Render Appuntamenti (solo se vista elenco attiva)
+  if (vistaAgendaCur !== 'mese') {
+    const occorrenze = [];
+    S.ev.forEach(e => {
+      const fine = evFine(e);
+      if (fine < ymStart || e.data > ymEnd) return;
+      const dCur = D(e.data < ymStart ? ymStart : e.data);
+      const dLim = D(fine > ymEnd ? ymEnd : fine);
+      while (dCur <= dLim) {
+        const dIso = iso0(dCur);
+        const sortTime = (dIso === e.data ? (e.ora || '00:00') : '00:00');
+        occorrenze.push({ iso: dIso, sortKey: dIso + sortTime, ev: e });
+        dCur.setDate(dCur.getDate() + 1);
+      }
+    });
+    occorrenze.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 
-  let last = '';
-  $('agList').innerHTML = occorrenze.length ? occorrenze.map(occ => {
-    const h = occ.iso !== last ? `<div class="h" style="margin-top:12px;margin-bottom:6px;font-size:0.85rem">${cap(D(occ.iso).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }))}</div>` : '';
-    last = occ.iso;
-    return h + rowEv(occ.ev, occ.iso);
-  }).join('') : '<div class="empty">Nessun appuntamento in questo mese</div>';
+    let last = '';
+    $('agList').innerHTML = occorrenze.length ? occorrenze.map(occ => {
+      const h = occ.iso !== last ? `<div class="h" style="margin-top:12px;margin-bottom:6px;font-size:0.85rem">${cap(D(occ.iso).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }))}</div>` : '';
+      last = occ.iso;
+      return h + rowEv(occ.ev, occ.iso);
+    }).join('') : '<div class="empty">Nessun appuntamento in questo mese</div>';
+  }
 
   // 2. Render To-Do (Da fare) con scadenze nel mese
   renderAgendaTodos(ym);
@@ -2177,7 +2150,6 @@ async function addRep() {
   if (isGoogleConfigured()) {
     await inviaEventoGoogle(newEv);
   }
-  inviaEventoM365(newEv);
   toast(`${repCatLabel(cat)} salvata e aggiunta in Agenda! ✓`);
 }
 
@@ -2191,13 +2163,7 @@ async function delRep(key) {
   const gCal = (linkedEv && linkedEv.googleCalId) || getWritableSelectedGoogleCalendars()[0] || 'primary';
 
   mut(() => {
-    if (gId && isGoogleConfigured()) {
-      S.gcal = S.gcal || { connected: true, email: getGooglePrimaryEmail(), selectedCals: getGoogleSelectedCalendars(), calCache: [], dismissedIds: [], pendingDeletes: [] };
-      S.gcal.pendingDeletes = S.gcal.pendingDeletes || [];
-      if (!S.gcal.pendingDeletes.some(d => d.googleId === gId)) {
-        S.gcal.pendingDeletes.push({ googleId: gId, calId: gCal });
-      }
-    }
+    accodaEliminazioneGoogle(gId, gCal);
     if (linkedEv) {
       S.ev = S.ev.filter(e => e.id !== linkedEv.id);
     }
@@ -2316,7 +2282,7 @@ function controlli() {
   // M5.1b — Metà giornata (inizio e fine pausa)
   if (cfg.pausa) {
     if (!isVen(iso) && f === 'mat') {
-      const pIni = (typeof PARAM !== 'undefined' && PARAM.pausaInizio) ? P(PARAM.pausaInizio) : 765;
+      const pIni = PARAMETRI.pausaInizioFinestra || 735;
       if (nm >= pIni && nm < pIni + 30) notifica('Pausa pranzo', 'Fascia pausa aperta: ricorda di timbrare l’uscita pausa', iso + '_pstart', '#oggi');
     }
     if (f === 'pausa') {
@@ -2439,7 +2405,7 @@ window.addEventListener('beforeunload', () => {
     localStorage.setItem('cf_reload_ts', String(Date.now()));
   } catch (e) {}
 });
-window.onload = () => {
+window.addEventListener('load', () => {
   load();
   riportaTodoNonChiusi(true);
   puliziaFired();
@@ -2471,7 +2437,15 @@ window.onload = () => {
   apriDaHash(); const hv = document.documentElement.dataset.ver, ok = hv === APP_VERSION;
   $('ver').textContent = ok ? `Cronoflex v${APP_VERSION} · by arch. Lonardo Massimo` : `File non allineati (pagina ${hv}, logica ${APP_VERSION}): usa "Forza aggiornamento" dal menu`; $('ver').style.color = ok ? 'var(--muted)' : 'var(--danger)';
   controlli(); setInterval(() => { if (riportaTodoNonChiusi(true) > 0) refresh(); controlli(); if (pagina.cur === 'oggi') aggiornaSchermataOggi(); }, 30000);
-};
+  avviaSincronizzazioniIniziali();
+  setInterval(eseguiAutoSyncCalendari, 2 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') eseguiAutoSyncCalendari();
+  });
+  window.addEventListener('focus', () => {
+    eseguiAutoSyncCalendari();
+  });
+});
 
 
 // ---------- Gestione Opzioni & Chiusure Aziendali ----------
@@ -2525,18 +2499,6 @@ function caricaOpzioni() {
     </div>`;
   }).join('');
 }
-
-// Inizializzazione sequenziale Cloud -> Calendario + sincronizzazione continua in background
-window.addEventListener('load', () => {
-  avviaSincronizzazioniIniziali();
-  setInterval(eseguiAutoSyncCalendari, 2 * 60 * 1000);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') eseguiAutoSyncCalendari();
-  });
-  window.addEventListener('focus', () => {
-    eseguiAutoSyncCalendari();
-  });
-});
 
 
 // ==========================================
@@ -2661,7 +2623,6 @@ function popolaSelectAttivita(forzaRebuild = false) {
   const sig = `v2_${cats.length}_${favs.join('|')}`;
   if (!forzaRebuild && sel.dataset.sig === sig && sel.options.length > 5) {
     aggiornaStellaFavAttUI();
-    renderFavAttChips();
     return;
   }
   sel.dataset.sig = sig;
@@ -2710,7 +2671,6 @@ function popolaSelectAttivita(forzaRebuild = false) {
   }
 
   aggiornaStellaFavAttUI();
-  renderFavAttChips();
 }
 
 function aggiornaStellaFavAttUI() {
@@ -2723,39 +2683,6 @@ function aggiornaStellaFavAttUI() {
   btn.style.borderColor = isFav ? '#f5a524' : 'var(--line)';
   btn.style.background = isFav ? '#fff8eb' : '#fff';
   btn.style.color = isFav ? '#d48806' : 'var(--muted)';
-}
-
-function renderFavAttChips() {
-  const box = $('favAttChips');
-  if (!box) return;
-  // Le preferite sono visibili solo nel menù a discesa (gruppo in cima): nessun pulsante rapido
-  box.innerHTML = '';
-  return;
-  const favs = getFavAttList();
-  const cats = getCategorieDirigente();
-  const selVal = $('attCat') ? $('attCat').value : '';
-
-  if (!favs.length) {
-    box.innerHTML = `<div style="font-size:0.74rem;color:var(--muted);margin-bottom:4px">💡 Tocca <b>☆</b> accanto a una commessa o <a href="#" onclick="apriModalFavAtt();return false" style="color:var(--blue);font-weight:600">scegli le preferite</a> per averle sempre qui a portata di clic.</div>`;
-    return;
-  }
-
-  box.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">` + favs.map(fKey => {
-    const c = cats.find(x => getCatKey(x) === fKey);
-    if (!c) return '';
-    const active = selVal === fKey;
-    const shortName = getCatDisplayLabel(c, false).replace('Manutenzione straordinaria/nuove opere', 'Manut. straord.');
-    return `<button type="button" onclick="selezionaFavAttChip(this.dataset.key)" data-key="${escHtml(fKey)}" style="border:1px solid ${active ? 'var(--blue)' : '#f0c978'};background:${active ? 'var(--blue)' : '#fffaf0'};color:${active ? '#fff' : 'var(--navy)'};border-radius:16px;padding:4px 9px;font-size:0.74rem;font-weight:600;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(getCatDisplayLabel(c, true))}">⭐ ${escHtml(shortName)} <span style="opacity:0.75;font-weight:500">(${escHtml(getCatSubBreve(c))})</span></button>`;
-  }).join('') + `</div>`;
-}
-
-function selezionaFavAttChip(key) {
-  const sel = $('attCat');
-  if (!sel) return;
-  sel.value = key;
-  aggiornaStellaFavAttUI();
-  renderFavAttChips();
-  if ($('attOre')) $('attOre').focus();
 }
 
 function toggleFavAttCorrente() {
@@ -2771,7 +2698,6 @@ function toggleFavAttCorrente() {
   popolaSelectAttivita(true);
   sel.value = key;
   aggiornaStellaFavAttUI();
-  renderFavAttChips();
   toast(aggiunta ? '⭐ Aggiunta alle attività preferite!' : 'Rimossa dalle attività preferite.');
 }
 
@@ -2900,7 +2826,7 @@ function renderAttivita(iso) {
           <b>${escHtml(catNome)}</b>
         </div>
         ${subNome ? `<div style="font-size:0.73rem;color:var(--muted)">${escHtml(subNome)}</div>` : ''}
-        ${a.note ? `<div style="font-size:0.8rem;color:var(--text);margin-top:2px">${escHtml(a.note)}</div>` : ''}
+        ${a.note ? `<div style="font-size:0.8rem;color:var(--ink);margin-top:2px">${escHtml(a.note)}</div>` : ''}
       </div>
       <button class="ib d" onclick="delAtt(${i})" aria-label="Elimina">${IC.bin}</button>
     </div>`;
@@ -2950,28 +2876,7 @@ function apriModalOutlook() {
 }
 
 function aggiornaStatoOutlookUI() {
-  const token = localStorage.getItem('cf_m365_token');
-  const badge = $('badgeStatusM365');
-  const btnAccedi = $('btnAccediM365');
-  const btnSync = $('btnSyncM365');
-  const btnDisc = $('btnDisconnettiM365');
-  const txt = $('outlookStatusText');
-
-  if (token) {
-    if (badge) { badge.textContent = 'Connesso ✓'; badge.className = 'bd g'; }
-    if (btnAccedi) btnAccedi.style.display = 'none';
-    if (btnSync) btnSync.style.display = 'inline-block';
-    if (btnDisc) btnDisc.style.display = 'inline-block';
-    if (txt && !isGoogleConfigured()) txt.textContent = 'Account Microsoft 365 Connesso ✓';
-  } else {
-    if (badge) { badge.textContent = 'Non collegato'; badge.className = 'bd n'; }
-    if (btnAccedi) btnAccedi.style.display = 'inline-block';
-    if (btnSync) btnSync.style.display = 'none';
-    if (btnDisc) btnDisc.style.display = 'none';
-    if (txt && !isGoogleConfigured() && !localStorage.getItem('cf_cal_feed_url')) {
-      txt.textContent = 'Nessun calendario collegato';
-    }
-  }
+  if (typeof aggiornaStatoGoogleUI === 'function') aggiornaStatoGoogleUI();
 }
 
 function getCanonicalRedirectUri() {
@@ -3036,7 +2941,6 @@ function salvaConfigGoogleSuStato(patch = {}, syncCloud = true) {
   if (Array.isArray(S.gcal.selectedCals)) {
     localStorage.setItem('cf_google_selected_cals', JSON.stringify(S.gcal.selectedCals));
   }
-  save();
   if (syncCloud && typeof triggerAutoSyncCloud === 'function') triggerAutoSyncCloud();
 }
 
@@ -3120,7 +3024,6 @@ function logoutGoogle() {
     S.ev = S.ev.filter(e => !e.googleId);
   }
   S.gcal = { connected: false, email: '', selectedCals: [], calCache: [], dismissedIds: [], userConfigured: false };
-  save();
   refresh();
   triggerAutoSyncCloud();
   aggiornaStatoGoogleUI();
@@ -3134,7 +3037,6 @@ function pulisciEventiImportati() {
   if (!confirm(`Vuoi rimuovere dall'agenda tutti i ${count} eventi scaricati da calendari esterni?\n\nGli impegni creati manualmente non verranno toccati. Se un calendario è attivo, al prossimo sync verranno riscaricati solo gli eventi dei calendari selezionati.`)) return;
 
   S.ev = S.ev.filter(e => !e.googleId && !e.feedUid && !e.isFeedIcs);
-  save();
   refresh();
   triggerAutoSyncCloud();
   aggiornaStatoGoogleUI();
@@ -3235,7 +3137,6 @@ async function eseguiAutoSyncCalendari() {
   if (now - lastCalAutoSyncTs < 25 * 1000) return;
   lastCalAutoSyncTs = now;
 
-  if (typeof syncScaricaDatiCloud === 'function') await syncScaricaDatiCloud(false);
   riallineaConfigGoogleDaCloud();
 
   if (isGoogleConfigured()) {
@@ -3370,7 +3271,6 @@ async function toggleGoogleCalId(calId, checked) {
     const before = S.ev.length;
     S.ev = S.ev.filter(e => e.googleCalId !== calId);
     if (S.ev.length !== before) {
-      save();
       refresh();
     }
   }
@@ -3516,7 +3416,6 @@ async function eseguiPendingDeletesGoogle() {
 
   if (changed || remaining.length !== S.gcal.pendingDeletes.length) {
     S.gcal.pendingDeletes = remaining;
-    save();
     triggerAutoSyncCloud();
   }
   return remaining.length === 0;
@@ -3527,7 +3426,7 @@ async function inviaEventoGoogle(evento, salvaSubito = true) {
   const token = localStorage.getItem('cf_google_token');
   if (!token || !isGoogleTokenValid()) {
     evento.pendingSync = 'create';
-    if (salvaSubito) { save(); refresh(); }
+    if (salvaSubito) { refresh(); }
     return false;
   }
   try {
@@ -3554,7 +3453,6 @@ async function inviaEventoGoogle(evento, salvaSubito = true) {
       evento.googleCalColor = calMeta.backgroundColor || evento.googleCalColor || '#4285F4';
       delete evento.pendingSync;
       if (salvaSubito) {
-        save();
         refresh();
         triggerAutoSyncCloud();
       }
@@ -3562,12 +3460,11 @@ async function inviaEventoGoogle(evento, salvaSubito = true) {
     } else if (res.status === 401) {
       invalidaTokenGoogle();
       evento.pendingSync = 'create';
-      if (salvaSubito) { save(); aggiornaStatoGoogleUI(); }
+      if (salvaSubito) { aggiornaStatoGoogleUI(); }
     }
   } catch (e) {
     console.warn('Creazione evento su Google Calendar fallita:', e);
     evento.pendingSync = 'create';
-    if (salvaSubito) save();
   }
   return false;
 }
@@ -3578,7 +3475,7 @@ async function aggiornaEventoGoogle(evento, moveToCalId = null, salvaSubito = tr
   const token = localStorage.getItem('cf_google_token');
   if (!token || !isGoogleTokenValid()) {
     evento.pendingSync = 'update';
-    if (salvaSubito) { save(); refresh(); }
+    if (salvaSubito) { refresh(); }
     return false;
   }
 
@@ -3599,7 +3496,7 @@ async function aggiornaEventoGoogle(evento, moveToCalId = null, salvaSubito = tr
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         }).catch(() => {});
-        if (salvaSubito) { save(); refresh(); triggerAutoSyncCloud(); }
+        if (salvaSubito) { refresh(); triggerAutoSyncCloud(); }
         return true;
       } else {
         evento.googleId = oldGId;
@@ -3623,7 +3520,6 @@ async function aggiornaEventoGoogle(evento, moveToCalId = null, salvaSubito = tr
       if (calMeta.backgroundColor) evento.googleCalColor = calMeta.backgroundColor;
       delete evento.pendingSync;
       if (salvaSubito) {
-        save();
         refresh();
         triggerAutoSyncCloud();
       }
@@ -3633,18 +3529,17 @@ async function aggiornaEventoGoogle(evento, moveToCalId = null, salvaSubito = tr
       return await inviaEventoGoogle(evento, salvaSubito);
     } else if (res.status === 403) {
       delete evento.pendingSync;
-      if (salvaSubito) { save(); refresh(); }
+      if (salvaSubito) { refresh(); }
       toast('Calendario Google in sola lettura: modifica salvata localmente.');
       return false;
     } else if (res.status === 401) {
       invalidaTokenGoogle();
       evento.pendingSync = 'update';
-      if (salvaSubito) { save(); aggiornaStatoGoogleUI(); }
+      if (salvaSubito) { aggiornaStatoGoogleUI(); }
     }
   } catch (e) {
     console.warn('Aggiornamento evento su Google Calendar fallito:', e);
     evento.pendingSync = 'update';
-    if (salvaSubito) save();
   }
   return false;
 }
@@ -3671,7 +3566,6 @@ async function flushPendingOutboundGoogle() {
   }
 
   if (pushed > 0) {
-    save();
     refresh();
     triggerAutoSyncCloud();
   }
@@ -3723,7 +3617,6 @@ async function sincronizzaGoogle(silenzioso = false) {
       S.ev = S.ev.filter(e => !e.googleId);
       const removed = before - S.ev.length;
       if (removed > 0) {
-        save();
         refresh();
         triggerAutoSyncCloud();
       }
@@ -3970,7 +3863,6 @@ async function sincronizzaGoogle(silenzioso = false) {
     const anyChange = importati > 0 || aggiornati > 0 || rimossi > 0 || inviatiAGoogle > 0;
     if (importati > 0 || aggiornati > 0 || rimossi > 0) {
       S.ev = nextEv;
-      save();
       refresh();
       triggerAutoSyncCloud();
     }
@@ -3997,35 +3889,6 @@ async function sincronizzaGoogle(silenzioso = false) {
   } finally {
     isSyncingGoogle = false;
     aggiornaStatoGoogleUI();
-  }
-}
-
-// Invia nuovo evento a Microsoft Graph se collegato
-async function inviaEventoM365(evento) {
-  const token = localStorage.getItem('cf_m365_token');
-  if (!token) return;
-  try {
-    const dStr = `${evento.data}T${evento.ora || '09:00'}:00`;
-    const start = new Date(dStr);
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
-    const payload = {
-      subject: evento.titolo,
-      start: { dateTime: start.toISOString(), timeZone: 'Europe/Rome' },
-      end: { dateTime: end.toISOString(), timeZone: 'Europe/Rome' },
-      location: { displayName: evento.luogo || '' },
-      reminderMinutesBeforeStart: parseInt(evento.reminder || 30, 10)
-    };
-    const res = await fetch('https://graph.microsoft.com/v1.0/me/events', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (res.ok) {
-      const created = await res.json();
-      evento.m365Id = created.id;
-    }
-  } catch (e) {
-    console.warn('Sync singolo evento su M365 fallito:', e);
   }
 }
 
@@ -4598,7 +4461,7 @@ async function recuperaModelloBaseBuffer() {
       fileName: custom.fileName || 'Modello personalizzato'
     };
   }
-  const res = await fetch('./modello_dirigenza.xlsx?v=4.48');
+  const res = await fetch(`./modello_dirigenza.xlsx?v=${APP_VERSION}`);
   if (!res.ok) throw new Error('Impossibile caricare modello_dirigenza.xlsx dal server.');
   const buf = await res.arrayBuffer();
   return { buffer: buf, sig: 'builtin_dir_new_clean_v4', keepCompiled: false, fileName: 'DIR-NEW AGENDA (Ufficiale)' };
@@ -4861,7 +4724,6 @@ async function esportaExcelDirigente(forzaRipartiPulito = false) {
       templateSig: baseInfo.sig,
       updatedAt: new Date().toISOString()
     });
-    save();
 
     // Avvia download del file identico al modello ufficiale
     const blob = new Blob([outBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -5038,21 +4900,6 @@ async function ripartiFoglioPulitoAnno() {
 // ==========================================
 // GESTIONE PARAMETRI ORARIO PERSONALI
 // ==========================================
-const DEFAULT_PARAMETRI = {
-  fasciaIngressoInizio: 8 * 60,      // 08:00
-  fasciaIngressoFine: 9 * 60,        // 09:00
-  pausaMinimaMinuti: 30,
-  pausaFineFinestra: 14 * 60 + 15,   // 14:15
-  uscitaMinimaLunGio: 17 * 60 + 15,  // 17:15
-  oreTeoricheLunGio: 8 * 60,         // 480 min
-  oreTeoricheVenerdi: 6 * 60,        // 360 min
-  scattoMinimoStraordinario: 30,
-  scattoSuccessivoStraordinario: 15,
-  tettoBancaOre: 40 * 60,            // 2400 min
-  santoPatrono: '06-24',             // S. Giovanni (Busto Arsizio), personalizzabile ('' = nessuno)
-  festiviExtra: ''                   // altri festivi ricorrenti 'MM-DD' separati da virgola
-};
-
 function applicaParametri() {
   const p = S.prm || {};
   PARAMETRI = Object.assign({}, DEFAULT_PARAMETRI, p);
@@ -5111,8 +4958,8 @@ function salvaParametriOrario() {
       santoPatrono: sp,
       festiviExtra: feConv.join(',')
     };
+    applicaParametri();
   });
-  applicaParametri();
   toast('Parametri orario salvati con successo! ✓');
 }
 
@@ -5241,7 +5088,6 @@ function rimuoviFeedCal() {
     localStorage.removeItem('cf_cal_feed_url');
     if ($('calFeedUrl')) $('calFeedUrl').value = '';
     S.ev = S.ev.filter(e => !e.feedUid && !e.isFeedIcs);
-    save();
     refresh();
     triggerAutoSyncCloud();
     aggiornaStatoFeedCalUI();
@@ -5329,7 +5175,6 @@ async function sincronizzaFeedCal(notificaUser = false) {
 
     if (nuovi > 0 || aggiornati > 0 || rimossi > 0) {
       S.ev = nextEv;
-      save();
       refresh();
       triggerAutoSyncCloud();
     }
