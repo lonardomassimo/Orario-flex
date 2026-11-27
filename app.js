@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.62', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.63', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -1303,6 +1303,8 @@ function smartWorkingOrarioEv(g) {
 async function salvaGiustificativo() {
   const tipo = $('selTipoGiust').value, iso = iso0(currentDate), n = { data: iso, tipo };
   if (bloccato(iso)) return;
+  const prevGiust = (editGiustIdx !== null && S.g[editGiustIdx]) ? S.g[editGiustIdx] : null;
+  const keepEccezioneSw = !!(prevGiust && prevGiust.tipo === 'SMART WORKING' && prevGiust.eccezioneSwInaz && tipo === 'SMART WORKING');
 
   if (tipo === 'VISITA MEDICA') {
     n.oraInizio = $('visitaInizio').value;
@@ -1333,13 +1335,14 @@ async function salvaGiustificativo() {
       const d = ($('durataManuale').value || '').trim();
       const m = /^\d{1,2}:[0-5]\d$/.test(d) ? P(d) : 0;
       if (!m) return alert('Durata non valida: verifica gli orari di inizio e fine (es. 09:00 – 10:30).');
-      if (tipo === 'SMART WORKING' && m > 240) return alert('Lo Smart Working di mezza giornata ha un limite massimo di 4 ore (4:00).');
+      if (tipo === 'SMART WORKING' && m > 240 && !keepEccezioneSw) return alert('Lo Smart Working di mezza giornata ha un limite massimo di 4 ore (4:00).');
       if (tipo !== 'SMART WORKING' && m % 15) return alert("Questo giustificativo si prende a scatti di 15 minuti.");
       if (tipo === 'FERIE' && m < 30) return alert("Per le Ferie il primo scatto minimo è di 30 minuti (per coprire 15 minuti scegli Ex-festività o Ore recupero, oppure estendi l'orario a 30 min).");
       n.tuttaGiornata = false;
       n.oraInizio = ini;
       n.oraFine = fin;
       n.durata = `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+      if (keepEccezioneSw) n.eccezioneSwInaz = true;
     }
   } else {
     n.tuttaGiornata = false;
