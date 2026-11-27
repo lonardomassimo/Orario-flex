@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.59', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.60', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -332,8 +332,16 @@ function badgesGiustStoricoHTML(gG, r) {
 
 function mancanti(iso, tG) {
   const has = t => tG.some(x => x.tipo === t), m = [], chiusa = giornataChiusa(iso, tG);
-  if (has('U') && !has('E')) m.push('E'); if (has('E') && !has('U') && iso < todayISO()) m.push('U');
-  if (!isVen(iso)) { if (has('U PAUSA') && !has('E PAUSA') && chiusa) m.push('E PAUSA'); if (has('E PAUSA') && !has('U PAUSA')) m.push('U PAUSA'); }
+  const pIni = PARAMETRI.pausaInizioFinestra || 735;
+  const hasEPom = tG.some(x => x.tipo === 'E PAUSA' && P(x.ora) >= pIni);
+  const hasEMat = tG.some(x => x.tipo === 'E' && P(x.ora) < pIni);
+  const soloPomEPausa = hasEPom && !has('U PAUSA') && !hasEMat;
+  if (has('U') && !has('E') && !soloPomEPausa) m.push('E');
+  if (has('E') && !has('U') && iso < todayISO()) m.push('U');
+  if (!isVen(iso)) {
+    if (has('U PAUSA') && !has('E PAUSA') && chiusa) m.push('E PAUSA');
+    if (has('E PAUSA') && !has('U PAUSA') && !soloPomEPausa) m.push('U PAUSA');
+  }
   return m;
 }
 // Mancate timbrature: ne è tollerata una al mese
