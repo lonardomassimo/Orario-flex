@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.64', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.65', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -545,12 +545,34 @@ function aggiornaSchermataOggi() {
   recapRows.push(['Ore effettivamente lavorate', F(c.oreLavorateMin)], ['Ore giustificate', F(c.oreGiustificateMin)], ['Totale coperto giornata', F(c.oreTotaliSvolteMin)], ['Pausa', c.pausaEffettivaMin + ' min'], ['Straordinario', F(c.straordinarioNettoMin)], ['Ticket', ticketGiorno(iso) ? 'sì' : 'no']);
   $('recap').innerHTML = recapRows.map(x => `<div class="row"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
 }
-const segHTML = (iso, d, pieno) => `<div class="seg"><button class="${d === 'BANCA' ? 'on' : ''}" ${pieno ? 'disabled' : ''} onclick="setDest('BANCA','${iso}')">Monte ore</button><button class="${d === 'PAGAMENTO' ? 'on' : ''}" onclick="setDest('PAGAMENTO','${iso}')">Pagamento</button></div>`;
-function setDest(v, iso) { iso = iso || iso0(currentDate); if (bloccato(iso)) return; mut(() => S.d[iso] = v); }
+const segHTML = (iso, d, pieno) => `<div class="seg"><button class="${d === 'BANCA' ? 'on' : ''}" ${pieno ? 'disabled' : ''} onclick="setDest('BANCA','${iso}')">Monte ore</button><button class="${d === 'PAGAMENTO' ? 'on' : ''}" ${pieno ? 'disabled' : ''} onclick="setDest('PAGAMENTO','${iso}')">Pagamento</button></div>`;
+function avvisaSeTettoBancaOre(iso) {
+  const r = calcDay(iso);
+  if (r.straordinarioNettoMin > 0 && pienoBanca(iso)) {
+    const y = iso.slice(0, 4);
+    const msg = !bancaAbilitata(y)
+      ? `⚠ Accantonamento non attivo: straordinario di ${F(r.straordinarioNettoMin)} destinato automaticamente a Pagamento`
+      : `⚠ Monte ore annuo (${F(PARAMETRI.tettoBancaOre)}) raggiunto: straordinario di ${F(r.straordinarioNettoMin)} destinato automaticamente a Pagamento`;
+    toast(msg);
+  }
+}
+function setDest(v, iso) {
+  iso = iso || iso0(currentDate);
+  if (bloccato(iso)) return;
+  if (v === 'BANCA' && pienoBanca(iso)) {
+    toast(`Monte ore annuo (${F(PARAMETRI.tettoBancaOre)}) raggiunto: straordinario destinato automaticamente a Pagamento`);
+    mut(() => S.d[iso] = 'PAGAMENTO');
+    return;
+  }
+  mut(() => S.d[iso] = v);
+}
 function destCard(iso, c) {
   const box = $('destCard'), s = c.straordinarioNettoMin; if (s <= 0) { box.style.display = 'none'; return; }
-  const pieno = pienoBanca(iso), d = getDest(iso) || (pieno ? 'PAGAMENTO' : null), y = iso.slice(0, 4); box.style.display = 'block';
-  box.innerHTML = `${d ? '' : '<div class="warn">⚠ Non hai ancora scelto dove va lo straordinario</div>'}<div class="h">Straordinario di ${F(s)}: dove va?</div>${segHTML(iso, d, pieno)}<small class="note">${!bancaAbilitata(y) ? 'Accantonamento non attivo: ferie residue oltre 50h a fine anno scorso' : pieno ? 'Limite annuo di 40h raggiunto: solo pagamento' : `Ancora accantonabili ${F(accantonabile(y))}`}</small>`;
+  const pieno = pienoBanca(iso), d = pieno ? 'PAGAMENTO' : getDest(iso), y = iso.slice(0, 4); box.style.display = 'block';
+  const msgPieno = !bancaAbilitata(y)
+    ? 'Accantonamento non attivo (ferie residue oltre 50h a fine anno scorso): straordinario automaticamente in Pagamento.'
+    : `Monte ore annuo di ${F(PARAMETRI.tettoBancaOre)} raggiunto: non è più possibile accantonare, lo straordinario va automaticamente in Pagamento.`;
+  box.innerHTML = `${pieno ? `<div class="alert" style="margin-bottom:8px"><b>⚠ Limite monte ore superato</b><br>${msgPieno}</div>` : (d ? '' : '<div class="warn">⚠ Non hai ancora scelto dove va lo straordinario</div>')}<div class="h">Straordinario di ${F(s)}: ${pieno ? 'destinazione automatica' : 'dove va?'}</div>${segHTML(iso, d, pieno)}<small class="note">${pieno ? 'Scelta bloccata: destinazione automatica in Pagamento' : `Ancora accantonabili ${F(accantonabile(y))}`}</small>`;
 }
 function renderReg(tG, gG, iso) {
   const ts = S.t.filter(t => t.data === iso).sort((a, b) => P(a.ora) - P(b.ora)), ib = (fn, ic, cls, l) => `<button class="ib ${cls}" onclick="${fn}" aria-label="${l}">${ic}</button>`, mi = mancataInfo(iso);
@@ -1089,6 +1111,7 @@ function salvaTimbraturaManuale() {
   mut(() => editIdx === null ? S.t.push({ data: iso, autorizzata: false, ...f }) : Object.assign(S.t[editIdx], f)); chiudiModal('modalTimb');
   if (tipo === 'E') allineaSmartPomeridianoAEntrata(iso);
   const mi = f.mancata && mancataInfo(iso); if (mi) toast(`Mancata timbratura n° ${mi.n} del mese${mi.oltre ? ` — oltre il limite di 1: +${mi.n - 1}` : ' (tollerata)'}`);
+  else avvisaSeTettoBancaOre(iso);
 }
 const apriModal = id => $(id).classList.add('active'); const chiudiModal = id => $(id).classList.remove('active');
 
@@ -1630,7 +1653,7 @@ function renderGiornoStorico(d) {
     + `<button class="ib" onclick="currentDate=D('${d}');pagina('oggi')" aria-label="Apri giornata">${IC.pen}</button></span></div>`
     + dmHTML
     + `${al.length ? `<div class="chips">${al.map(a => `<button class="chip" onclick="fix('${d}','${a.f || 'd'}')">${a.t}</button>`).join('')}</div>` : ''}`
-    + `${nd && !S.ver[d.slice(0, 7)] ? `<div class="${g ? '' : 'warn'}" style="margin-top:8px">${g ? '' : '⚠ Scegli: '}${segHTML(d, g, pienoBanca(d))}</div>` : ''}`;
+    + `${nd && !S.ver[d.slice(0, 7)] ? (pienoBanca(d) ? `<div class="alert" style="margin-top:8px;margin-bottom:0">⚠ Monte ore raggiunto (${F(PARAMETRI.tettoBancaOre)}): straordinario automaticamente in Pagamento</div>` : `<div class="${g ? '' : 'warn'}" style="margin-top:8px">${g ? '' : '⚠ Scegli: '}${segHTML(d, g, false)}</div>`) : ''}`;
   return el;
 }
 
