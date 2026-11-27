@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.60', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.61', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -249,10 +249,50 @@ function residuo(tipo, iso) {
   return LIMITI[tipo] === undefined ? null : LIMITI[tipo] - usatoAnno(tipo, y);
 }
 const ticketGiorno = d => calcDay(d).oreLavorateMin + gDay(d).filter(g => g.tipo === 'SMART WORKING').reduce((a, g) => a + uso(g), 0) >= 240;
-const pausaRaw = tG => { const u = tG.find(t => t.tipo === 'U PAUSA'), e = tG.find(t => t.tipo === 'E PAUSA'); return u && e ? Math.max(0, P(e.ora) - P(u.ora)) : null; };
+const isTipoEntrata = t => t === 'E' || t === 'E PAUSA' || t === 'E VISITA MEDICA';
+const isTipoUscita = t => t === 'U' || t === 'U PAUSA' || t === 'U VISITA MEDICA';
+function estraiPassaggi(tG) {
+  const ord = [...(tG || [])].sort((a, b) => (P(a.ora) || 0) - (P(b.ora) || 0));
+  const entrateRaw = ord.filter(t => isTipoEntrata(t.tipo));
+  const entrate = [];
+  for (const e of entrateRaw) {
+    const prev = entrate[entrate.length - 1];
+    if (prev && Math.abs((P(e.ora) || 0) - (P(prev.ora) || 0)) <= 1 && (prev.tipo === 'E' || e.tipo === 'E')) {
+      if (prev.tipo !== 'E' && e.tipo === 'E') entrate[entrate.length - 1] = e;
+      continue;
+    }
+    entrate.push(e);
+  }
+  const uscite = ord.filter(t => isTipoUscita(t.tipo));
+  return { ord, entrate, uscite };
+}
+const pausaRaw = tG => {
+  const { entrate, uscite } = estraiPassaggi(tG);
+  if (entrate.length >= 2 && uscite.length >= 1) {
+    return Math.max(0, P(entrate[1].ora) - P(uscite[0].ora));
+  }
+  const u = (tG || []).find(t => t.tipo === 'U PAUSA'), e = (tG || []).find(t => t.tipo === 'E PAUSA');
+  return u && e ? Math.max(0, P(e.ora) - P(u.ora)) : null;
+};
+const isPausaInCorsoOggi = (iso, tG) => {
+  if (iso !== todayISO() || isVen(iso) || dow(iso) === 0 || dow(iso) === 6) return false;
+  const { entrate, uscite } = estraiPassaggi(tG);
+  if (entrate.length !== 1 || uscite.length !== 1) return false;
+  if (uscite[0].tipo === 'U PAUSA') return true;
+  const now = new Date(), nm = now.getHours() * 60 + now.getMinutes();
+  const e0 = P(entrate[0].ora), u0 = P(uscite[0].ora);
+  const hasGiustCopertura = gDay(iso).some(g => g.tipo === 'SMART WORKING' || g.tipo === 'FERIE' || g.tipo === 'ORE RECUPERO' || g.tipo === 'EX-FESTIVITÀ');
+  return e0 < (PARAMETRI.pausaInizioFinestra || 735) && u0 >= 720 && u0 <= (PARAMETRI.pausaFineFinestra || 855) && nm <= (14 * 60 + 30) && !hasGiustCopertura;
+};
 const giornataChiusa = (iso, tG) => {
   const ts = tG || tDay(iso);
-  if (iso < todayISO() || ts.some(t => t.tipo === 'U')) return true;
+  if (iso < todayISO()) return true;
+  const { entrate, uscite } = estraiPassaggi(ts);
+  if (uscite.length >= 2) return true;
+  if (uscite.length === 1) {
+    if (entrate.length === 1 && isPausaInCorsoOggi(iso, ts)) return false;
+    return entrate.length <= 1;
+  }
   if (!ts.length) {
     const gs = gDay(iso);
     if (gs.length > 0) {
@@ -331,17 +371,10 @@ function badgesGiustStoricoHTML(gG, r) {
 }
 
 function mancanti(iso, tG) {
-  const has = t => tG.some(x => x.tipo === t), m = [], chiusa = giornataChiusa(iso, tG);
-  const pIni = PARAMETRI.pausaInizioFinestra || 735;
-  const hasEPom = tG.some(x => x.tipo === 'E PAUSA' && P(x.ora) >= pIni);
-  const hasEMat = tG.some(x => x.tipo === 'E' && P(x.ora) < pIni);
-  const soloPomEPausa = hasEPom && !has('U PAUSA') && !hasEMat;
-  if (has('U') && !has('E') && !soloPomEPausa) m.push('E');
-  if (has('E') && !has('U') && iso < todayISO()) m.push('U');
-  if (!isVen(iso)) {
-    if (has('U PAUSA') && !has('E PAUSA') && chiusa) m.push('E PAUSA');
-    if (has('E PAUSA') && !has('U PAUSA') && !soloPomEPausa) m.push('U PAUSA');
-  }
+  const { entrate, uscite } = estraiPassaggi(tG);
+  const m = [];
+  if (uscite.length > entrate.length) m.push('E');
+  if (entrate.length > uscite.length && iso < todayISO()) m.push('U');
   return m;
 }
 // Mancate timbrature: ne è tollerata una al mese
@@ -417,7 +450,16 @@ function alertGiorno(iso) {
 // ---------- Oggi ----------
 const big = (l, v, s) => `<div class="big"><small>${l}</small><b>${v}</b>${s ? `<em>${s}</em>` : ''}</div>`;
 const pills = c => `<div class="lbl">Se fai straordinario esci alle</div><div class="pills">${[30, 45, 60].map((m, i) => `<div><small>+${m} min</small><b>${c['oraScatto' + m + 'm']}</b></div>`).join('')}</div>`;
-function fase(tG, ven) { const has = t => tG.some(x => x.tipo === t); if (!has('E')) return 'prima'; if (has('U')) return 'fine'; if (ven || has('E PAUSA')) return 'pom'; return has('U PAUSA') ? 'pausa' : 'mat'; }
+function fase(tG, ven) {
+  const { entrate, uscite } = estraiPassaggi(tG);
+  const nE = entrate.length, nU = uscite.length;
+  if (nE === 0) return 'prima';
+  if (nE >= 2 && nU >= 2) return 'fine';
+  if (nE >= 2 && nU === 1) return 'pom';
+  if (nE === 1 && nU === 1) return isPausaInCorsoOggi(iso0(currentDate), tG) ? 'pausa' : 'fine';
+  if (ven || P(entrate[0].ora) >= (PARAMETRI.pausaInizioFinestra || 735)) return 'pom';
+  return 'mat';
+}
 const rientri = c => { const ini = P(c.inizioPausa), mn = ini + 30; return { mn, mx: Math.max(mn, Math.min(ini + P(c.pausaMassimaPerUscitaMinima), PARAMETRI.pausaFineFinestra)) }; };
 function aggiornaSchermataOggi() {
   const iso = iso0(currentDate), now = new Date(), nm = now.getHours() * 60 + now.getMinutes(), isOggi = iso === todayISO(), td = tipoGiorno(iso);
@@ -503,8 +545,13 @@ function destCard(iso, c) {
 }
 function renderReg(tG, gG, iso) {
   const ts = S.t.filter(t => t.data === iso).sort((a, b) => P(a.ora) - P(b.ora)), ib = (fn, ic, cls, l) => `<button class="ib ${cls}" onclick="${fn}" aria-label="${l}">${ic}</button>`, mi = mancataInfo(iso);
+  const { entrate, uscite } = estraiPassaggi(ts);
   $('regList').innerHTML = `<div class="h">Timbrature</div>` + (ts.length ? ts.map(t => { const i = S.t.indexOf(t);
-    return `<div class="tl"><span class="bd t">TIMBRATURA</span><span class="nm">${t.tipo}${t.mancata ? ' <span class="bd x">MANCATA</span>' : ''}${t.rep ? ' <span class="bd r">REP</span>' : ''}</span><b>${t.ora}</b>${ib(`modificaTimb(${i})`, IC.pen, '', 'Modifica')}${ib(`eliminaTimb(${i})`, IC.bin, 'd', 'Elimina')}</div>`; }).join('') : '<div class="empty">Nessuna timbratura</div>')
+    let labelTipo = isTipoUscita(t.tipo) ? 'Uscita' : 'Entrata';
+    if ((entrate.length >= 2 && uscite.length >= 2 && (t === uscite[0] || t === entrate[1])) || t.tipo === 'U PAUSA' || t.tipo === 'E PAUSA') {
+      labelTipo += ' (pausa)';
+    }
+    return `<div class="tl"><span class="bd t">TIMBRATURA</span><span class="nm">${labelTipo}${t.mancata ? ' <span class="bd x">MANCATA</span>' : ''}${t.rep ? ' <span class="bd r">REP</span>' : ''}</span><b>${t.ora}</b>${ib(`modificaTimb(${i})`, IC.pen, '', 'Modifica')}${ib(`eliminaTimb(${i})`, IC.bin, 'd', 'Elimina')}</div>`; }).join('') : '<div class="empty">Nessuna timbratura</div>')
     + (mi ? `<div class="empty" style="color:var(--danger)">Mancata timbratura n° ${mi.n} del mese${mi.oltre ? ` — oltre il limite di 1: +${mi.n - 1}` : ' (tollerata)'}</div>` : '')
     + `<div class="h" style="margin-top:12px">Giustificativi</div>` + (gG.length ? gG.map(g => {
       const i = S.g.indexOf(g);
@@ -992,7 +1039,7 @@ function quickTimbra(tipo) {
 }
 function apriTimb(tipo, ora, idx) {
   editIdx = idx === undefined ? null : idx; const n = new Date(), t = editIdx === null ? {} : S.t[editIdx];
-  $('selTipoTimb').value = tipo || 'E'; $('oraTimbManuale').value = ora || `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+  $('selTipoTimb').value = isTipoUscita(tipo) ? 'U' : 'E'; $('oraTimbManuale').value = ora || `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
   $('chkMancata').checked = !!t.mancata; $('chkRep').checked = !!t.rep; $('rowRep').style.display = inRep(editIdx === null ? iso0(currentDate) : t.data) ? 'flex' : 'none';
   $('titTimb').textContent = editIdx === null ? 'Aggiungi timbratura' : 'Modifica timbratura'; $('modalTimb').classList.add('active');
 }
@@ -1136,7 +1183,7 @@ function ricalcolaDurataDaOrariGiust() {
   let rawMin = fin - ini;
   let dedottaPausa = false;
   const pIni = PARAMETRI.pausaInizioFinestra || 735;
-  if (!isVen(iso) && dow(iso) !== 0 && dow(iso) !== 6 && ini < pIni && fin > PARAMETRI.pausaFineFinestra && !tDay(iso).some(t => t.tipo === 'U PAUSA')) {
+  if (!isVen(iso) && dow(iso) !== 0 && dow(iso) !== 6 && ini < pIni && fin > PARAMETRI.pausaFineFinestra && estraiPassaggi(tDay(iso)).uscite.length < 2 && !tDay(iso).some(t => t.tipo === 'U PAUSA')) {
     rawMin = Math.max(0, rawMin - PARAMETRI.pausaMinimaMinuti);
     dedottaPausa = true;
   }
