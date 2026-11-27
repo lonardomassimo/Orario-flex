@@ -2,7 +2,7 @@
  * Motore di Calcolo Orario Flex — Implementazione JavaScript pura
  */
 
-let PARAMETRI = {
+const DEFAULT_PARAMETRI = {
   fasciaIngressoInizio: 8 * 60,      // 08:00 (480 min)
   fasciaIngressoFine: 9 * 60,        // 09:00 (540 min)
   pausaInizioFinestra: 12 * 60 + 15, // 12:15 (735 min)
@@ -17,6 +17,7 @@ let PARAMETRI = {
   santoPatrono: '06-24',             // S. Giovanni (Busto Arsizio), personalizzabile ('' = nessuno)
   festiviExtra: ''                   // altri festivi ricorrenti 'MM-DD' separati da virgola
 };
+let PARAMETRI = Object.assign({}, DEFAULT_PARAMETRI);
 
 function parseTimeToMinutes(str) {
   if (!str) return null;
@@ -60,6 +61,43 @@ function calcolaPasquettaMMDD(year) {
   return `${String(pasqua.getMonth() + 1).padStart(2, '0')}-${String(pasqua.getDate()).padStart(2, '0')}`;
 }
 
+const FISSI_NAZIONALI_MMDD = ['01-01', '01-06', '04-25', '05-01', '06-02', '08-15', '11-01', '12-08', '12-25', '12-26'];
+const isTipoEntrata = t => t === 'E' || t === 'E PAUSA' || t === 'E VISITA MEDICA';
+const isTipoUscita = t => t === 'U' || t === 'U PAUSA' || t === 'U VISITA MEDICA';
+
+function getFestiviAnno(year) {
+  const s = new Set(FISSI_NAZIONALI_MMDD);
+  const p = calcolaPasquettaMMDD(year);
+  if (p) s.add(p);
+  if (typeof PARAMETRI !== 'undefined') {
+    const sp = PARAMETRI.santoPatrono !== undefined ? PARAMETRI.santoPatrono : '06-24';
+    if (sp) s.add(sp);
+    if (PARAMETRI.festiviExtra) {
+      String(PARAMETRI.festiviExtra).split(',').map(x => x.trim()).filter(Boolean).forEach(x => s.add(x));
+    }
+  } else {
+    s.add('06-24');
+  }
+  return s;
+}
+
+function estraiPassaggiGiorno(timbratureGiorno) {
+  const timbOrd = [...timbratureGiorno].sort((a, b) => (parseTimeToMinutes(a.ora) || 0) - (parseTimeToMinutes(b.ora) || 0));
+  const entrateRaw = timbOrd.filter(t => isTipoEntrata(t.tipo));
+  const entrate = [];
+  for (const e of entrateRaw) {
+    const eMin = parseTimeToMinutes(e.ora);
+    const prev = entrate[entrate.length - 1];
+    if (prev && Math.abs(eMin - parseTimeToMinutes(prev.ora)) <= 1 && (prev.tipo === 'E' || e.tipo === 'E')) {
+      if (prev.tipo !== 'E' && e.tipo === 'E') entrate[entrate.length - 1] = e;
+      continue;
+    }
+    entrate.push(e);
+  }
+  const uscite = timbOrd.filter(t => isTipoUscita(t.tipo));
+  return { timbOrd, entrate, uscite };
+}
+
 // Calcolo deterministico della singola giornata con fasce orarie giustificativi e calcolo scoperti
 function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMinutes = null) {
   const dateObj = new Date(dataStr + 'T12:00:00');
@@ -70,18 +108,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   const mmdd = dataStr.slice(5);
 
   // Verifica festivo (incluso Santo Patrono, festiviExtra e Pasquetta)
-  let isFestivo = false;
-  if (typeof PARAMETRI !== 'undefined') {
-    const sp = PARAMETRI.santoPatrono || '06-24';
-    if (sp && mmdd === sp) isFestivo = true;
-    if (PARAMETRI.festiviExtra) {
-      const extra = String(PARAMETRI.festiviExtra).split(',').map(s => s.trim());
-      if (extra.includes(mmdd)) isFestivo = true;
-    }
-  }
-  const fissiNazionali = ['01-01', '01-06', '04-25', '05-01', '06-02', '08-15', '11-01', '12-08', '12-25', '12-26'];
-  if (fissiNazionali.includes(mmdd)) isFestivo = true;
-  if (!isFestivo && mmdd === calcolaPasquettaMMDD(parseInt(yStr, 10))) isFestivo = true;
+  const isFestivo = getFestiviAnno(parseInt(yStr, 10)).has(mmdd);
 
   const oreDovute = (isWeekend || isFestivo) ? 0 : (isVenerdi ? PARAMETRI.oreTeoricheVenerdi : PARAMETRI.oreTeoricheLunGio);
 
@@ -89,23 +116,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   const scopertiOrari = []; // [{ tipoScoperto, inizio, fine, durataMin, label }]
 
   // 1. Estrazione passaggi in ordine cronologico (compatibile sia con sole E/U sia con storiche U PAUSA / E PAUSA / VISITA MEDICA)
-  const isEntrataTipo = t => t === 'E' || t === 'E PAUSA' || t === 'E VISITA MEDICA';
-  const isUscitaTipo = t => t === 'U' || t === 'U PAUSA' || t === 'U VISITA MEDICA';
-  const timbOrd = [...timbratureGiorno].sort((a, b) => (parseTimeToMinutes(a.ora) || 0) - (parseTimeToMinutes(b.ora) || 0));
-
-  const entrateRaw = timbOrd.filter(t => isEntrataTipo(t.tipo));
-  const entrate = [];
-  for (const e of entrateRaw) {
-    const eMin = parseTimeToMinutes(e.ora);
-    const prev = entrate[entrate.length - 1];
-    if (prev && Math.abs(eMin - parseTimeToMinutes(prev.ora)) <= 1 && (prev.tipo === 'E' || e.tipo === 'E')) {
-      // Deduplica eventuali coppie E + E PAUSA allo stesso orario
-      if (prev.tipo !== 'E' && e.tipo === 'E') entrate[entrate.length - 1] = e;
-      continue;
-    }
-    entrate.push(e);
-  }
-  const uscite = timbOrd.filter(t => isUscitaTipo(t.tipo));
+  const { entrate, uscite } = estraiPassaggiGiorno(timbratureGiorno);
 
   let primaEntrata = null;
   let inizioPausaMin = null;
@@ -162,7 +173,6 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   let entrataRawMin = null;
   let entrataNormMin = null;
   let ritardoIngressoMin = 0;
-  let ritardoIngressoRealeMin = 0; // effettivo ritardo non coperto da anticipare
   let ingressoSoloPomeriggio = false;
 
   if (primaEntrata) {
@@ -281,6 +291,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   }
 
   const oreAssenzaGiustificataMin = Math.max(0, oreGiustificateMin - smartWorkingMin);
+  intervalliGiust.sort((a, b) => a.ini - b.ini);
 
   const swGiusts = giustificativiGiorno.filter(g => g.tipo === 'SMART WORKING');
   const swFullDay = swGiusts.some(g => g.tuttaGiornata);
@@ -294,7 +305,6 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   // 5. Pausa Effettiva / In corso
   const hasStraordPausa = giustificativiGiorno.some(g => g.tipo === 'STRAORDINARIO PAUSA');
   const hasPausaNonTimbrata = giustificativiGiorno.some(g => g.tipo === 'PAUSA NON TIMBRATA');
-  const hasSmartWorking = smartWorkingMin > 0;
   const gVisitaPranzo = giustificativiGiorno.find(g => {
     if (g.tipo !== 'VISITA MEDICA') return false;
     const vIni = parseTimeToMinutes(g.oraInizio);
@@ -312,19 +322,12 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   let assenzaIntermediaVisitaMin = 0;
   let isPausaInCorso = false;
 
-  if (isVenerdi) {
+  if (isVenerdi || isWeekend) {
     if (inizioPausaMin !== null && finePausaNormMin !== null) {
       const durataTimbrata = Math.max(0, finePausaNormMin - inizioPausaMin);
       pausaEffettivaMin = Math.max(PARAMETRI.pausaMinimaMinuti, durataTimbrata);
     } else {
-      // Regola Inaz per il venerdì continuato: NON detrae mai i 30 min di pausa obbligatoria.
-      pausaEffettivaMin = 0;
-    }
-  } else if (isWeekend) {
-    if (inizioPausaMin !== null && finePausaNormMin !== null) {
-      const durataTimbrata = Math.max(0, finePausaNormMin - inizioPausaMin);
-      pausaEffettivaMin = Math.max(PARAMETRI.pausaMinimaMinuti, durataTimbrata);
-    } else {
+      // Regola Inaz per il venerdì continuato (e weekend): NON detrae mai i 30 min di pausa obbligatoria.
       pausaEffettivaMin = 0;
     }
   } else if (ingressoSoloPomeriggio) {
@@ -380,7 +383,6 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   // 6. SCENARI MATTUTINI E STRATEGIE DI USCITA
   let uscitaTeoricaMin = null;
   let pausaMassimaPerUscitaMinima = null;
-  let orarioFine8hConPausaMin = null;
   let anticipoRispettoPalettoMin = 0;
   let oraScatto30m = null, oraScatto45m = null, oraScatto60m = null;
   let swPomeriggioInizioPrevisto = null, swPomeriggioFinePrevista = null;
@@ -395,7 +397,6 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
       oraScatto45m = uscitaTeoricaMin + 45;
       oraScatto60m = uscitaTeoricaMin + 60;
     } else if (isSwPomeriggio) {
-      orarioFine8hConPausaMin = baseCalcolo + oreLavoroNecessarie + PARAMETRI.pausaMinimaMinuti;
       pausaMassimaPerUscitaMinima = PARAMETRI.pausaMinimaMinuti;
       uscitaTeoricaMin = entrataNormMin + oreLavoroNecessarie;
       swPomeriggioInizioPrevisto = uscitaTeoricaMin + PARAMETRI.pausaMinimaMinuti;
@@ -404,7 +405,6 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
       oraScatto45m = uscitaTeoricaMin + 45;
       oraScatto60m = uscitaTeoricaMin + 60;
     } else {
-      orarioFine8hConPausaMin = baseCalcolo + oreLavoroNecessarie + PARAMETRI.pausaMinimaMinuti;
       const pausaPossibileGrezza = PARAMETRI.uscitaMinimaLunGio - (baseCalcolo + oreLavoroNecessarie);
       pausaMassimaPerUscitaMinima = Math.max(PARAMETRI.pausaMinimaMinuti, pausaPossibileGrezza);
 
@@ -433,8 +433,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
     // Calcola minuti coperti da intervalli espliciti
     let coperto = 0;
     let maxFinCopertoDaInizio = winIni;
-    const sorted = [...intervalliGiust].sort((a, b) => a.ini - b.ini);
-    sorted.forEach(iv => {
+    intervalliGiust.forEach(iv => {
       const ovIni = Math.max(winIni, iv.ini);
       const ovFin = Math.min(winFin, iv.fin);
       if (ovFin > ovIni) {
@@ -501,30 +500,20 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
       oreLavorateMin = lavSedeFloor15;
       uscitaConteggiataMin = entrataNormMin + oreLavorateMin;
 
-      if (isSwPomeriggio) {
-        const gSwPom = swGiusts.find(g => parseTimeToMinutes(g.oraFine) !== null);
-        const swFineMin = gSwPom ? parseTimeToMinutes(gSwPom.oraFine) : null;
-        if (swFineMin !== null) {
-          const uFloor15 = Math.floor(ultimaUscitaMin / 15) * 15;
-          const inizioSwEff = uFloor15 + PARAMETRI.pausaMinimaMinuti;
-          const swMaxDaUscita = Math.max(0, swFineMin - inizioSwEff);
-          let swEff = Math.min(smartWorkingMin, swMaxDaUscita);
-          if (!hasEccezioneSwInaz) {
-            swEff = Math.min(swEff, 240);
-          }
-          smartWorkingMin = swEff;
-          oreGiustificateMin = oreAssenzaGiustificataMin + swEff;
-          giustPerTipo['SMART WORKING'] = swEff;
-        } else {
-          if (hasEccezioneSwInaz) {
-            oreLavorateMin = Math.min(oreLavorateMin, Math.max(0, targetTotale - smartWorkingMin));
-            uscitaConteggiataMin = entrataNormMin + oreLavorateMin;
-          } else if (oreLavorateMin + smartWorkingMin > targetTotale) {
-            smartWorkingMin = Math.max(0, targetTotale - oreLavorateMin);
-            oreGiustificateMin = oreAssenzaGiustificataMin + smartWorkingMin;
-            giustPerTipo['SMART WORKING'] = smartWorkingMin;
-          }
+      const swFineMin = (isSwPomeriggio && swGiusts.find(g => parseTimeToMinutes(g.oraFine) !== null))
+        ? parseTimeToMinutes(swGiusts.find(g => parseTimeToMinutes(g.oraFine) !== null).oraFine)
+        : null;
+      if (isSwPomeriggio && swFineMin !== null) {
+        const uFloor15 = Math.floor(ultimaUscitaMin / 15) * 15;
+        const inizioSwEff = uFloor15 + PARAMETRI.pausaMinimaMinuti;
+        const swMaxDaUscita = Math.max(0, swFineMin - inizioSwEff);
+        let swEff = Math.min(smartWorkingMin, swMaxDaUscita);
+        if (!hasEccezioneSwInaz) {
+          swEff = Math.min(swEff, 240);
         }
+        smartWorkingMin = swEff;
+        oreGiustificateMin = oreAssenzaGiustificataMin + swEff;
+        giustPerTipo['SMART WORKING'] = swEff;
       } else {
         if (hasEccezioneSwInaz) {
           oreLavorateMin = Math.min(oreLavorateMin, Math.max(0, targetTotale - smartWorkingMin));
@@ -686,7 +675,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
         // Uscita anticipata o ore mancanti a fine giornata: parte dall'uscita conteggiata
         iniS = uscitaConteggiataMin !== null ? uscitaConteggiataMin : ultimaUscitaMin;
         // Se c'è già un giustificativo pomeridiano che parte da iniS, trasla dopo la fine di quel giustificativo
-        intervalliGiust.sort((a, b) => a.ini - b.ini).forEach(iv => {
+        intervalliGiust.forEach(iv => {
           if (iv.ini <= iniS + 1 && iv.fin > iniS) iniS = iv.fin;
         });
         const pIni = PARAMETRI.pausaInizioFinestra || 735;
@@ -712,26 +701,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
 
   minutiGiustificativoRichiesti = scopertiOrari.reduce((acc, s) => acc + s.durataMin, 0);
 
-  // Minuti oltre l'orario e calcolo prossimo scatto live
-  let minutiOltreOrario = eccedenzaGrezzaMin;
-  let minutiAlProssimoScatto = 0;
-  let orarioProssimoScatto = null;
-  let valoreProssimoScatto = 0;
-
-  if (nowMinutes !== null && entrataNormMin !== null && ultimaUscitaMin === null) {
-    if (eccedenzaGrezzaMin < PARAMETRI.scattoMinimoStraordinario) {
-      minutiAlProssimoScatto = PARAMETRI.scattoMinimoStraordinario - eccedenzaGrezzaMin;
-      valoreProssimoScatto = PARAMETRI.scattoMinimoStraordinario;
-      orarioProssimoScatto = nowMinutes + minutiAlProssimoScatto;
-    } else {
-      const step = PARAMETRI.scattoSuccessivoStraordinario;
-      const residuoScatto = eccedenzaGrezzaMin % step;
-      minutiAlProssimoScatto = (residuoScatto === 0) ? step : (step - residuoScatto);
-      valoreProssimoScatto = straordinarioNettoMin + step;
-      orarioProssimoScatto = nowMinutes + minutiAlProssimoScatto;
-    }
-  }
-
+  const minutiOltreOrario = eccedenzaGrezzaMin;
   const ticket = ((oreLavorateMin + smartWorkingMin) >= 4 * 60);
 
   return {
@@ -766,9 +736,6 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
     oreTotaliSvolteMin,
     straordinarioNettoMin,
     minutiOltreOrario,
-    minutiAlProssimoScatto,
-    orarioProssimoScatto: formatMinutesToTime(orarioProssimoScatto),
-    valoreProssimoScatto,
     ticket,
     isLive,
     isPausaInCorso,
