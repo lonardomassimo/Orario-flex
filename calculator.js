@@ -305,6 +305,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
 
   let pausaEffettivaMin = 0;
   let pausaConvertitaStraordMin = 0;
+  let assenzaIntermediaVisitaMin = 0;
   let isPausaInCorso = false;
 
   if (isVenerdi) {
@@ -328,8 +329,12 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   } else if (isVisitaMedicaPranzo) {
     // Visita medica a cavallo del pranzo (es. 05/03: U 11:31 per visita medica fine 12:45, E PAUSA 14:00)
     // La pausa effettiva va dalla fine della visita medica (12:45) al rientro (14:00) = 75 min
+    // L'intervallo di visita medica (11:31 -> 12:45) va dedotto dalla presenza in sede per evitare doppio conteggio con oreGiustificateMin
     const fallbackIni = uscitaIntermediaMin !== null ? uscitaIntermediaMin : inizioPausaMin;
     const finVisita = gVisitaPranzo ? (parseTimeToMinutes(gVisitaPranzo.oraFine) || (fallbackIni + 75)) : (fallbackIni + 75);
+    if (fallbackIni !== null && finVisita > fallbackIni) {
+      assenzaIntermediaVisitaMin = finVisita - fallbackIni;
+    }
     const rientroMin = finePausaNormMin !== null ? finePausaNormMin : finePausaMin;
     pausaEffettivaMin = Math.max(PARAMETRI.pausaMinimaMinuti, Math.max(0, rientroMin - finVisita));
   } else if ((isSwPomeriggio || isSwMattina) && inizioPausaMin === null && finePausaMin === null) {
@@ -465,7 +470,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   let reqPaletto1715Scoperto = 0;
 
   if (entrataNormMin !== null && ultimaUscitaMin !== null) {
-    const lavoroGrezzoMin = Math.max(0, ultimaUscitaMin - entrataNormMin - pausaEffettivaMin);
+    const lavoroGrezzoMin = Math.max(0, ultimaUscitaMin - entrataNormMin - pausaEffettivaMin - assenzaIntermediaVisitaMin);
     const uscitaPrima1715LunGio = (!isVenerdi && !isWeekend && ultimaUscitaMin < PARAMETRI.uscitaMinimaLunGio);
     // È uscita anticipata se esce prima delle 17:15 (Lun-Gio) OPPURE se (lavoro + giustificativi + eventuale ritardo mattutino da giustificare) non copre le ore dovute
     const mancaFineGiornata = oreDovute > 0 && (lavoroGrezzoMin + oreGiustificateMin + infoRitIngresso.scopertoMin + infoRitPausa.scopertoMin) < oreDovute;
@@ -553,7 +558,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   } else if (entrataNormMin !== null && nowMinutes !== null) {
     isLive = true;
     const lordo = Math.max(0, nowMinutes - entrataNormMin);
-    oreLavorateMin = Math.max(0, lordo - pausaEffettivaMin);
+    oreLavorateMin = Math.max(0, lordo - pausaEffettivaMin - assenzaIntermediaVisitaMin);
   } else if (entrataNormMin !== null && ultimaUscitaMin === null && nowMinutes === null) {
     attenzioni.push('Uscita mancante');
   }
@@ -568,17 +573,23 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   }
 
   // Se c'è un ritardo mattutino d'ingresso scoperto non giustificato (> 09:00, es. 03/09 E 09:01)
-  // o coperto solo da permesso non retribuito, l'orario ordinario massimo retribuito per la giornata viene decurtato
+  // o coperto solo da permesso non retribuito, l'orario ordinario massimo retribuito per la giornata viene decurtato.
+  // Se invece il PNR copre il rientro pausa oltre le 14:15 (es. 11/05), non decurta ulteriormente il target ordinario.
   const ritardoIngressoScopertoMin = infoRitIngresso.scopertoMin;
-  const targetOrdinarioGiorno = Math.max(0, oreDovute - ritardoIngressoScopertoMin - permessoNonRetrNettoMin);
+  const pnrSuRitardoPausaMin = (ritardoPausaMin > 0 && permessoNonRetrNettoMin > 0)
+    ? Math.min(permessoNonRetrNettoMin, ritardoPausaMin)
+    : 0;
+  const pnrRiduzioneTargetMin = Math.max(0, permessoNonRetrNettoMin - pnrSuRitardoPausaMin);
+  const targetOrdinarioGiorno = Math.max(0, oreDovute - ritardoIngressoScopertoMin - pnrRiduzioneTargetMin);
 
-  // Riduzione delle FERIE mattutine parziali se il lavoro prolungato copre le ore (es. 23/04, 14/09)
+  // Riduzione delle FERIE mattutine parziali se il lavoro prolungato copre le ore con eccedenza >= 30 min (es. 23/04, 14/09)
   let ferieEffettiveMin = giustPerTipo['FERIE'] || 0;
   const gFerie = giustificativiGiorno.find(g => g.tipo === 'FERIE' && !g.tuttaGiornata);
   if (gFerie && ferieEffettiveMin > 0 && oreDovute > 0 && !isFestivo) {
     const totSvoltoGrezzo = oreLavorateMin + oreGiustificateMin;
-    if (totSvoltoGrezzo > targetOrdinarioGiorno) {
-      const eccedenzaAssorbibile = Math.floor((totSvoltoGrezzo - targetOrdinarioGiorno) / 15) * 15;
+    const eccedenzaFerie = totSvoltoGrezzo - targetOrdinarioGiorno;
+    if (eccedenzaFerie >= PARAMETRI.scattoMinimoStraordinario) {
+      const eccedenzaAssorbibile = Math.floor(eccedenzaFerie / 15) * 15;
       const riduzione = Math.min(ferieEffettiveMin, eccedenzaAssorbibile);
       if (riduzione > 0) {
         ferieEffettiveMin -= riduzione;
