@@ -118,7 +118,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
 
   if (primaEntrata) {
     entrataRawMin = parseTimeToMinutes(primaEntrata.ora);
-    if (entrataRawMin >= PARAMETRI.pausaInizioFinestra && inizioPausaMin === null && finePausaMin === null) {
+    if (entrataRawMin >= PARAMETRI.pausaInizioFinestra && inizioPausaMin === null && (finePausaMin === null || Math.abs(finePausaMin - entrataRawMin) <= 1)) {
       // Ingresso solo pomeridiano timbrato come E (es. dopo SW, recupero o assenza mattutina):
       // tra 12:15 e 14:15 vale al minuto esatto; oltre 14:15 arrotonda ai 15 min successivi
       ingressoSoloPomeriggio = true;
@@ -521,7 +521,7 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   // Se c'è un ritardo mattutino d'ingresso scoperto non giustificato (> 09:00, es. 03/09 E 09:01)
   // o coperto solo da permesso non retribuito, l'orario ordinario massimo retribuito per la giornata viene decurtato
   const ritardoIngressoScopertoMin = infoRitIngresso.scopertoMin;
-  const targetOrdinarioGiorno = Math.max(0, oreDovute - ritardoIngressoScopertoMin);
+  const targetOrdinarioGiorno = Math.max(0, oreDovute - ritardoIngressoScopertoMin - permessoNonRetrNettoMin);
 
   // Riduzione delle FERIE mattutine parziali se il lavoro prolungato copre le ore (es. 23/04, 14/09)
   let ferieEffettiveMin = giustPerTipo['FERIE'] || 0;
@@ -610,8 +610,8 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
         durataMin: restMin,
         label: `Uscita ${formatMinutesToTime(ultimaUscitaMin)} (<17:15): scoperto ${sIni}–${sFin} (${formatMinutesToHoursMins(restMin)})`
       });
-    } else if ((oreTotaliSvolteMin + giaSegnalatoMin) < oreDovute) {
-      const gapRes = oreDovute - (oreTotaliSvolteMin + giaSegnalatoMin);
+    } else if ((oreTotaliSvolteMin + permessoNonRetrNettoMin + giaSegnalatoMin) < oreDovute) {
+      const gapRes = oreDovute - (oreTotaliSvolteMin + permessoNonRetrNettoMin + giaSegnalatoMin);
       const restMin = Math.max(15, Math.ceil(gapRes / 15) * 15);
       let iniS, finS;
       if (ingressoSoloPomeriggio || (entrataNormMin !== null && entrataNormMin >= (12 * 60 + 15))) {
