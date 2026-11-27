@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="it" data-ver="4.60">
+<html lang="it" data-ver="4.61">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -147,8 +147,8 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
     <div class="hero" id="hero"></div>
     <div class="card" id="destCard" style="display:none"></div>
     <div id="alertContainer"></div>
-    <div class="actions">
-      <button class="btn main" onclick="quickTimbra('E')">Entrata</button><button class="btn" onclick="quickTimbra('U PAUSA')">Inizio pausa</button><button class="btn" onclick="quickTimbra('E PAUSA')">Fine pausa</button><button class="btn" onclick="quickTimbra('U')">Uscita</button>
+    <div class="actions" style="grid-template-columns:1fr 1fr">
+      <button class="btn main" onclick="quickTimbra('E')">Entrata</button><button class="btn" onclick="quickTimbra('U')">Uscita</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px"><button class="btn sec" onclick="apriDialogGiustificativo()">+ Giustificativo</button><button class="btn sec" onclick="apriTimb()">+ Timbratura manuale</button></div>
     <div class="card" id="regList"></div>
@@ -543,7 +543,7 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
   <div class="foot"><button class="btn main" onclick="salvaGiustificativo()">Salva</button><button class="btn" onclick="chiudiModal('modalGiust')">Annulla</button></div></div></div>
 
 <div class="modal" id="modalTimb"><div class="sheet"><h3 id="titTimb">Aggiungi timbratura</h3>
-  <div class="f"><label>Tipo</label><select id="selTipoTimb"><option value="E">Entrata</option><option value="U PAUSA">Inizio pausa</option><option value="E PAUSA">Fine pausa</option><option value="U">Uscita</option><option value="U VISITA MEDICA">Uscita visita medica</option><option value="E VISITA MEDICA">Rientro visita medica</option></select></div>
+  <div class="f"><label>Tipo</label><select id="selTipoTimb"><option value="E">Entrata</option><option value="U">Uscita</option></select></div>
   <div class="f"><label>Orario</label><input type="time" id="oraTimbManuale"></div>
   <label class="chk"><input type="checkbox" id="chkMancata"> Mancata timbratura (se ne tollera una al mese)</label>
   <label class="chk" id="rowRep"><input type="checkbox" id="chkRep"> In reperibilità (conta nel contatore separato)</label>
@@ -601,7 +601,7 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 
 <div id="toast" role="status"></div>
 <footer id="ver" style="text-align:center;font-size:.72rem;margin-top:18px"></footer>
-<script src="seed.js?v=4.60"></script><script src="calculator.js?v=4.60"></script><script src="app.js?v=4.60"></script><script type="module" src="firebase-sync.js?v=4.60"></script>
+<script src="seed.js?v=4.61"></script><script src="calculator.js?v=4.61"></script><script src="app.js?v=4.61"></script><script type="module" src="firebase-sync.js?v=4.61"></script>
 <!-- Modal Chiusura Aziendale -->
 <div class="modal" id="modalChiusura">
   <div class="modal-content">
