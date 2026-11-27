@@ -88,22 +88,71 @@ function calcolaGiornata(dataStr, timbratureGiorno, giustificativiGiorno, nowMin
   const attenzioni = [];
   const scopertiOrari = []; // [{ tipoScoperto, inizio, fine, durataMin, label }]
 
-  // 1. Estrazione passaggi (incluso riconoscimento uscite/entrate per visita medica)
-  const timbEntrate = timbratureGiorno.filter(t => t.tipo === 'E').sort((a,b) => parseTimeToMinutes(a.ora) - parseTimeToMinutes(b.ora));
-  const primaEntrata = timbEntrate.length > 0 ? timbEntrate[0] : null;
+  // 1. Estrazione passaggi in ordine cronologico (compatibile sia con sole E/U sia con storiche U PAUSA / E PAUSA / VISITA MEDICA)
+  const isEntrataTipo = t => t === 'E' || t === 'E PAUSA' || t === 'E VISITA MEDICA';
+  const isUscitaTipo = t => t === 'U' || t === 'U PAUSA' || t === 'U VISITA MEDICA';
+  const timbOrd = [...timbratureGiorno].sort((a, b) => (parseTimeToMinutes(a.ora) || 0) - (parseTimeToMinutes(b.ora) || 0));
 
-  const timbPausaOut = timbratureGiorno.filter(t => t.tipo === 'U PAUSA').sort((a,b) => parseTimeToMinutes(a.ora) - parseTimeToMinutes(b.ora));
-  const inizioPausaMin = timbPausaOut.length > 0 ? parseTimeToMinutes(timbPausaOut[0].ora) : null;
+  const entrateRaw = timbOrd.filter(t => isEntrataTipo(t.tipo));
+  const entrate = [];
+  for (const e of entrateRaw) {
+    const eMin = parseTimeToMinutes(e.ora);
+    const prev = entrate[entrate.length - 1];
+    if (prev && Math.abs(eMin - parseTimeToMinutes(prev.ora)) <= 1 && (prev.tipo === 'E' || e.tipo === 'E')) {
+      // Deduplica eventuali coppie E + E PAUSA allo stesso orario
+      if (prev.tipo !== 'E' && e.tipo === 'E') entrate[entrate.length - 1] = e;
+      continue;
+    }
+    entrate.push(e);
+  }
+  const uscite = timbOrd.filter(t => isUscitaTipo(t.tipo));
 
-  const timbPausaIn = timbratureGiorno.filter(t => t.tipo === 'E PAUSA').sort((a,b) => parseTimeToMinutes(a.ora) - parseTimeToMinutes(b.ora));
-  const finePausaMin = timbPausaIn.length > 0 ? parseTimeToMinutes(timbPausaIn[0].ora) : null;
+  let primaEntrata = null;
+  let inizioPausaMin = null;
+  let finePausaMin = null;
+  let ultimaUscitaMin = null;
+  let uscitaIntermediaMin = null;
 
-  const timbUscite = timbratureGiorno.filter(t => t.tipo === 'U').sort((a,b) => parseTimeToMinutes(b.ora) - parseTimeToMinutes(a.ora));
-  const ultimaUscitaMin = timbUscite.length > 0 ? parseTimeToMinutes(timbUscite[0].ora) : null;
+  if (entrate.length === 0) {
+    ultimaUscitaMin = uscite.length > 0 ? parseTimeToMinutes(uscite[uscite.length - 1].ora) : null;
+  } else if (entrate.length === 1 && uscite.length === 0) {
+    primaEntrata = entrate[0];
+  } else if (entrate.length === 1 && uscite.length === 1) {
+    primaEntrata = entrate[0];
+    const u0 = uscite[0];
+    const u0Min = parseTimeToMinutes(u0.ora);
+    const e0Min = parseTimeToMinutes(entrate[0].ora);
+    const hasGiustCopertura = giustificativiGiorno.some(g => g.tipo === 'SMART WORKING' || g.tipo === 'FERIE' || g.tipo === 'ORE RECUPERO' || g.tipo === 'EX-FESTIVITÀ');
+    const isPausaLive = (u0.tipo === 'U PAUSA') || (
+      nowMinutes !== null &&
+      !isVenerdi &&
+      !isWeekend &&
+      e0Min < PARAMETRI.pausaInizioFinestra &&
+      u0Min >= (12 * 60) &&
+      u0Min <= PARAMETRI.pausaFineFinestra &&
+      nowMinutes <= (14 * 60 + 30) &&
+      !hasGiustCopertura
+    );
+    if (isPausaLive) {
+      inizioPausaMin = u0Min;
+    } else {
+      ultimaUscitaMin = u0Min;
+    }
+  } else if (entrate.length >= 2 && uscite.length === 1) {
+    primaEntrata = entrate[0];
+    inizioPausaMin = parseTimeToMinutes(uscite[0].ora);
+    finePausaMin = parseTimeToMinutes(entrate[1].ora);
+  } else {
+    primaEntrata = entrate[0];
+    inizioPausaMin = parseTimeToMinutes(uscite[0].ora);
+    finePausaMin = parseTimeToMinutes(entrate[1].ora);
+    ultimaUscitaMin = parseTimeToMinutes(uscite[uscite.length - 1].ora);
+  }
 
-  // Timbrature intermedie (es. uscita e rientro per visita medica)
-  const timbUscitaIntermedia = timbratureGiorno.find(t => t.tipo === 'U VISITA MEDICA' || (t.tipo === 'U' && t !== timbUscite[0]));
-  const uscitaIntermediaMin = timbUscitaIntermedia ? parseTimeToMinutes(timbUscitaIntermedia.ora) : null;
+  if (uscite.length >= 2) {
+    const timbUscitaIntermedia = uscite.find(t => t.tipo === 'U VISITA MEDICA') || uscite[0];
+    uscitaIntermediaMin = timbUscitaIntermedia ? parseTimeToMinutes(timbUscitaIntermedia.ora) : null;
+  }
 
   if (timbratureGiorno.some(t => t.fittizia)) {
     attenzioni.push('Timbrature fittizie presenti');
