@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.61', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.62', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -191,8 +191,16 @@ function repGiorniAnno(y) {
   return { gg1, gg2, tot: gg1 + gg2 };
 }
 const durMin = g => {
+  if (g.tuttaGiornata) {
+    if (g.data) {
+      const td = tipoGiorno(g.data);
+      if (td.rip || td.fest) return 0;
+      return isVen(g.data) ? (PARAMETRI.oreTeoricheVenerdi || 360) : (PARAMETRI.oreTeoricheLunGio || 480);
+    }
+    return g.durata ? (P(g.durata) || 0) : (PARAMETRI.oreTeoricheLunGio || 480);
+  }
   let m = g.durata ? (P(g.durata) || 0) : Math.max(0, (P(g.oraFine) || 0) - (P(g.oraInizio) || 0));
-  if (!g.tuttaGiornata && m > 0 && m % 15 !== 0 && g.tipo !== 'VISITA MEDICA' && g.tipo !== 'SMART WORKING') {
+  if (m > 0 && m % 15 !== 0 && g.tipo !== 'VISITA MEDICA' && g.tipo !== 'SMART WORKING') {
     m = Math.ceil(m / 15) * 15;
   }
   return m;
