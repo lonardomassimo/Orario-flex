@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.68', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.69', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -1096,10 +1096,6 @@ function tornaAOggi() {
 }
 
 function pagina(id, fromBack = false) {
-  if (id === 'storico') {
-    vistaAgendaCur = 'elenco';
-    id = 'agenda';
-  }
   const prevPage = pagina.cur;
   const prevDate = pagina.lastDate || iso0(currentDate);
   if (!fromBack && prevPage && (prevPage !== id || prevDate !== iso0(currentDate))) {
@@ -1108,12 +1104,9 @@ function pagina(id, fromBack = false) {
     salvaNavStack();
   }
   document.querySelectorAll('.pg').forEach(p => p.classList.toggle('on', p.id === 'p-' + id)); $('drawer').classList.remove('open'); window.scrollTo(0, 0);
-  $('titPag').textContent = { oggi: 'Oggi', agenda: 'Agenda & Storico', storico: 'Agenda & Storico', riepilogo: 'Riepilogo', strumenti: 'Strumenti', opzioni: 'Opzioni dell\'app', busta: 'Verifica busta paga', rep: 'Reperibilità', chiusure: 'Chiusure aziendali', parametri: 'Parametri orario' }[id] || 'Cronoflex';
+  $('titPag').textContent = { oggi: 'Oggi', agenda: 'Calendario', storico: 'Storico timbrature', riepilogo: 'Riepilogo', strumenti: 'Strumenti', opzioni: 'Opzioni dell\'app', busta: 'Verifica busta paga', rep: 'Reperibilità', chiusure: 'Chiusure aziendali', parametri: 'Parametri orario' }[id] || 'Cronoflex';
   pagina.cur = id;
   pagina.lastDate = iso0(currentDate);
-  if (id === 'agenda' && typeof setVistaAgenda === 'function') {
-    setVistaAgenda(vistaAgendaCur);
-  }
   try {
     sessionStorage.setItem('cf_cur_page', id);
     sessionStorage.setItem('cf_session_active', '1');
@@ -1882,8 +1875,8 @@ function caricaAgenda() {
   const numG = ultimoMese(rie.y, rie.m);
   const ymStart = `${ym}-01`, ymEnd = `${ym}-${String(numG).padStart(2, '0')}`;
 
-  // 1. Raggruppa Appuntamenti del mese per giorno (espandendo gli eventi multi-giorno)
-  const evPerGiorno = {};
+  // 1. Render Appuntamenti (espandendo gli eventi multi-giorno su tutti i giorni coperti nel mese)
+  const occorrenze = [];
   S.ev.forEach(e => {
     const fine = evFine(e);
     if (fine < ymStart || e.data > ymEnd) return;
@@ -1891,39 +1884,19 @@ function caricaAgenda() {
     const dLim = D(fine > ymEnd ? ymEnd : fine);
     while (dCur <= dLim) {
       const dIso = iso0(dCur);
-      (evPerGiorno[dIso] = evPerGiorno[dIso] || []).push(e);
+      const sortTime = (dIso === e.data ? (e.ora || '00:00') : '00:00');
+      occorrenze.push({ iso: dIso, sortKey: dIso + sortTime, ev: e });
       dCur.setDate(dCur.getDate() + 1);
     }
   });
-  Object.keys(evPerGiorno).forEach(k => {
-    evPerGiorno[k].sort((a, b) => ((k === a.data ? (a.ora || '00:00') : '00:00')).localeCompare(k === b.data ? (b.ora || '00:00') : '00:00'));
-  });
+  occorrenze.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 
-  // 2. Render Elenco & Storico del mese: giornate (dal più recente al più vecchio) + appuntamenti del giorno
-  const agBox = $('agList');
-  agBox.innerHTML = '';
-  const tISO = todayISO();
-  const datePresenti = new Set(giorniConDati());
-  let countRender = 0;
-  for (let day = numG; day >= 1; day--) {
-    const d = ym + '-' + String(day).padStart(2, '0');
-    const evs = evPerGiorno[d] || [];
-    if (d <= tISO || datePresenti.has(d) || evs.length) {
-      const card = giornoEl(d);
-      if (evs.length) {
-        card.classList.remove('quiet');
-        const evWrap = document.createElement('div');
-        evWrap.style.cssText = 'margin-top:8px;padding-top:6px;border-top:1px dashed var(--line)';
-        evWrap.innerHTML = `<div style="font-size:0.75rem;font-weight:700;color:var(--blue);margin-bottom:4px">📌 Appuntamenti</div>${evs.map(e => rowEv(e, d)).join('')}`;
-        card.appendChild(evWrap);
-      }
-      agBox.appendChild(card);
-      countRender++;
-    }
-  }
-  if (!countRender) {
-    agBox.innerHTML = '<div class="empty">Nessuna giornata o appuntamento in questo mese</div>';
-  }
+  let last = '';
+  $('agList').innerHTML = occorrenze.length ? occorrenze.map(occ => {
+    const h = occ.iso !== last ? `<div class="h" style="margin-top:12px;margin-bottom:6px;font-size:0.85rem">${cap(D(occ.iso).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }))}</div>` : '';
+    last = occ.iso;
+    return h + rowEv(occ.ev, occ.iso);
+  }).join('') : '<div class="empty">Nessun appuntamento in questo mese</div>';
 
   // 2. Render To-Do (Da fare) con scadenze nel mese
   renderAgendaTodos(ym);
