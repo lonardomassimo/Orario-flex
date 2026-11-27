@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.63', KEY = 'cronoflex_v4';
+const APP_VERSION = '4.64', KEY = 'cronoflex_v4';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -82,6 +82,7 @@ window.__cfApplyCloudState = (remoteS, remoteMs) => {
   applicaParametri();
   allineaImpegniReperibilita();
   riallineaConfigGoogleDaCloud();
+  riportaTodoNonChiusi(true);
   pulisciCacheLocaleDati();
   refresh();
 };
@@ -948,7 +949,37 @@ async function delEv(id) {
 function renderAttivita(iso) { const l = S.att[iso] || []; $('attList').innerHTML = l.length ? l.map((a, i) => `<div class="tl"><span class="nm"><b>${a.cat}</b>${a.note ? `<br><small>${a.note}</small>` : ''}</span><button class="ib d" onclick="delAtt(${i})" aria-label="Elimina">${IC.bin}</button></div>`).join('') : '<div class="empty">Nessuna attività registrata</div>'; }
 function addAtt() { const iso = iso0(currentDate); if (bloccato(iso)) return; const n = $('attNote').value.trim(); mut(() => (S.att[iso] = S.att[iso] || []).push({ cat: $('attCat').value, note: n })); $('attNote').value = ''; }
 const delAtt = i => { const iso = iso0(currentDate); if (!bloccato(iso)) mut(() => S.att[iso].splice(i, 1)); };
-function renderTodo(iso) { const l = S.todo.filter(x => x.data === iso); $('todoList').innerHTML = l.length ? l.map(x => `<div class="tl"><label class="nm chk"><input type="checkbox" ${x.fatto ? 'checked' : ''} onchange="togTodo('${x.id}')"><span style="${x.fatto ? 'text-decoration:line-through;color:var(--muted)' : ''}">${x.testo}</span></label><button class="ib d" onclick="delTodo('${x.id}')" aria-label="Elimina">${IC.bin}</button></div>`).join('') : '<div class="empty">Niente da fare</div>'; }
+function isGiornoLavorativoEffettivo(iso) {
+  return lavorativo(iso) && !(S.chiusure || []).some(c => c.data === iso);
+}
+function prossimoGiornoLavorativo(iso, includiSeLavorativo = false) {
+  if (includiSeLavorativo && isGiornoLavorativoEffettivo(iso)) return iso;
+  const d = D(iso);
+  for (let i = 0; i < 30; i++) {
+    d.setDate(d.getDate() + 1);
+    const cand = iso0(d);
+    if (isGiornoLavorativoEffettivo(cand)) return cand;
+  }
+  return iso;
+}
+function riportaTodoNonChiusi(salva = true) {
+  const oggi = todayISO();
+  const targetIso = prossimoGiornoLavorativo(oggi, true);
+  let spostati = 0;
+  (S.todo || []).forEach(x => {
+    if (!x.fatto && x.data && x.data < oggi) {
+      if (!x.spostatoDa) x.spostatoDa = x.data;
+      x.data = targetIso;
+      spostati++;
+    }
+  });
+  if (spostati > 0) {
+    invalidaCacheStato();
+    if (salva && typeof triggerAutoSyncCloud === 'function') triggerAutoSyncCloud();
+  }
+  return spostati;
+}
+function renderTodo(iso) { const l = S.todo.filter(x => x.data === iso); $('todoList').innerHTML = l.length ? l.map(x => `<div class="tl"><label class="nm chk"><input type="checkbox" ${x.fatto ? 'checked' : ''} onchange="togTodo('${x.id}')"><span style="${x.fatto ? 'text-decoration:line-through;color:var(--muted)' : ''}">${x.testo}${x.spostatoDa && x.spostatoDa !== x.data ? `<small style="color:var(--muted);margin-left:4px">(da ${fmtShortDM(x.spostatoDa)})</small>` : ''}</span></label><button class="ib d" onclick="delTodo('${x.id}')" aria-label="Elimina">${IC.bin}</button></div>`).join('') : '<div class="empty">Niente da fare</div>'; }
 function addTodo() { const t = $('todoIn').value.trim(); if (!t) return; mut(() => S.todo.push({ id: uid(), data: iso0(currentDate), testo: t, fatto: false })); $('todoIn').value = ''; if (fired()[todayISO() + '_eodtodo']) aggiornaNotificaTodoFineGiornata(false); }
 const togTodo = id => { mut(() => { const x = S.todo.find(y => y.id === id); if (x) x.fatto = !x.fatto; }); if (fired()[todayISO() + '_eodtodo']) aggiornaNotificaTodoFineGiornata(false); };
 const delTodo = id => { mut(() => S.todo = S.todo.filter(x => x.id !== id)); if (fired()[todayISO() + '_eodtodo']) aggiornaNotificaTodoFineGiornata(false); };
@@ -2344,6 +2375,7 @@ window.addEventListener('beforeunload', () => {
 });
 window.onload = () => {
   load();
+  riportaTodoNonChiusi(true);
   puliziaFired();
   const mAttivi = giorniConDati().map(d => d.slice(0, 7));
   if (mAttivi.length && !mAttivi.includes(ymStr(rie.y, rie.m))) {
@@ -2371,7 +2403,7 @@ window.onload = () => {
   initSwipeAgenda();
   apriDaHash(); const hv = document.documentElement.dataset.ver, ok = hv === APP_VERSION;
   $('ver').textContent = ok ? `Cronoflex v${APP_VERSION} · by arch. Lonardo Massimo` : `File non allineati (pagina ${hv}, logica ${APP_VERSION}): usa "Forza aggiornamento" dal menu`; $('ver').style.color = ok ? 'var(--muted)' : 'var(--danger)';
-  controlli(); setInterval(() => { controlli(); if (pagina.cur === 'oggi') aggiornaSchermataOggi(); }, 30000);
+  controlli(); setInterval(() => { if (riportaTodoNonChiusi(true) > 0) refresh(); controlli(); if (pagina.cur === 'oggi') aggiornaSchermataOggi(); }, 30000);
 };
 
 
