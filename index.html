@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="it" data-ver="4.68">
+<html lang="it" data-ver="4.69">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -130,7 +130,8 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 <div class="drawer" id="drawer" onclick="if(event.target===this)apriMenu()"><nav>
   <h4>Cronoflex</h4>
   <button onclick="pagina('oggi')">📅 Oggi</button>
-  <button onclick="pagina('agenda')">🗓️ Agenda &amp; Storico</button>
+  <button onclick="pagina('storico')">📜 Storico timbrature</button>
+  <button onclick="pagina('agenda')">🗓️ Calendario</button>
   <button onclick="pagina('riepilogo')">📊 Riepilogo</button>
 
   <div style="border-top:1px solid var(--line);margin:14px 0 10px"></div>
@@ -212,9 +213,9 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 
   <!-- Switcher Vista: Vista Mese (predefinita) vs Elenco -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 10px;gap:8px;flex-wrap:wrap">
-    <div class="seg" style="max-width:290px;flex:1">
+    <div class="seg" style="max-width:240px;flex:1">
       <button id="btnVistaMese" class="on" onclick="setVistaAgenda('mese')">📅 Vista Mese</button>
-      <button id="btnVistaElenco" onclick="setVistaAgenda('elenco')">📋 Elenco &amp; Storico</button>
+      <button id="btnVistaElenco" onclick="setVistaAgenda('elenco')">📋 Elenco</button>
     </div>
     <button class="btn main" style="padding:6px 12px;font-size:0.8rem" onclick="apriEv()">+ Nuovo impegno</button>
   </div>
@@ -224,9 +225,9 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
     <div id="agMeseGriglia"></div>
   </div>
 
-  <!-- Sezione Appuntamenti e Storico Giornate (Vista Elenco) -->
-  <div id="boxVistaElencoAgenda" style="display:none">
-    <div class="h" style="margin:0 0 8px">📋 Storico giornate &amp; Appuntamenti del mese</div>
+  <!-- Sezione Appuntamenti e Impegni (Vista Elenco) -->
+  <div class="card" id="boxVistaElencoAgenda" style="display:none">
+    <div class="h" style="margin:0 0 8px">📌 Appuntamenti &amp; Impegni</div>
     <div id="agList"></div>
   </div>
 
@@ -598,7 +599,7 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 
 <div id="toast" role="status"></div>
 <footer id="ver" style="text-align:center;font-size:.72rem;margin-top:18px"></footer>
-<script src="seed.js?v=4.68"></script><script src="calculator.js?v=4.68"></script><script src="app.js?v=4.68"></script><script type="module" src="firebase-sync.js?v=4.68"></script>
+<script src="seed.js?v=4.69"></script><script src="calculator.js?v=4.69"></script><script src="app.js?v=4.69"></script><script type="module" src="firebase-sync.js?v=4.69"></script>
 <!-- Modal Chiusura Aziendale -->
 <div class="modal" id="modalChiusura">
   <div class="modal-content">
