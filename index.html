@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="it" data-ver="4.65">
+<html lang="it" data-ver="4.66">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -120,6 +120,9 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0b3a63" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
       <span id="cloudSyncDot" style="position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:#107c41;display:none"></span>
     </button>
+    <button class="hb" id="btnRefreshApp" onclick="forzaAggiornamento()" aria-label="Aggiorna app" title="Aggiorna app all'ultima versione">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0b3a63" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+    </button>
     <button class="hb" onclick="annulla()" aria-label="Annulla ultima operazione" title="Annulla ultima operazione"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0b3a63" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
   </div>
 </header>
@@ -127,8 +130,7 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 <div class="drawer" id="drawer" onclick="if(event.target===this)apriMenu()"><nav>
   <h4>Cronoflex</h4>
   <button onclick="pagina('oggi')">📅 Oggi</button>
-  <button onclick="pagina('storico')">📜 Storico</button>
-  <button onclick="pagina('agenda')">🗓️ Agenda &amp; To-Do</button>
+  <button onclick="pagina('agenda')">🗓️ Agenda &amp; Storico</button>
   <button onclick="pagina('riepilogo')">📊 Riepilogo</button>
 
   <div style="border-top:1px solid var(--line);margin:14px 0 10px"></div>
@@ -209,10 +211,10 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
   </div>
 
   <!-- Switcher Vista: Vista Mese (predefinita) vs Elenco -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 10px">
-    <div class="seg" style="max-width:240px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 10px;gap:8px;flex-wrap:wrap">
+    <div class="seg" style="max-width:290px;flex:1">
       <button id="btnVistaMese" class="on" onclick="setVistaAgenda('mese')">📅 Vista Mese</button>
-      <button id="btnVistaElenco" onclick="setVistaAgenda('elenco')">📋 Elenco</button>
+      <button id="btnVistaElenco" onclick="setVistaAgenda('elenco')">📋 Elenco &amp; Storico</button>
     </div>
     <button class="btn main" style="padding:6px 12px;font-size:0.8rem" onclick="apriEv()">+ Nuovo impegno</button>
   </div>
@@ -236,9 +238,9 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
     </div>
   </div>
 
-  <!-- Sezione Appuntamenti e Impegni (Vista Elenco) -->
-  <div class="card" id="boxVistaElencoAgenda" style="display:none">
-    <div class="h" style="margin:0 0 8px">📌 Appuntamenti &amp; Impegni in Agenda</div>
+  <!-- Sezione Appuntamenti e Storico Giornate (Vista Elenco) -->
+  <div id="boxVistaElencoAgenda" style="display:none">
+    <div class="h" style="margin:0 0 8px">📋 Storico giornate &amp; Appuntamenti del mese</div>
     <div id="agList"></div>
   </div>
 </section>
@@ -538,6 +540,9 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
         <input type="text" id="durataManuale" placeholder="es. 1:30">
         <small id="infoCalcoloOrariGiust" class="note"></small>
       </div>
+      <div class="f" id="boxEccezioneSwInaz" style="display:none;margin-top:6px">
+        <label class="chk" style="margin:0"><input type="checkbox" id="chkEccezioneSwInaz"> Deroga tetto 4h (eccezione INAZ)</label>
+      </div>
     </div>
   </div>
   <div class="foot"><button class="btn main" onclick="salvaGiustificativo()">Salva</button><button class="btn" onclick="chiudiModal('modalGiust')">Annulla</button></div></div></div>
@@ -601,7 +606,7 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
 
 <div id="toast" role="status"></div>
 <footer id="ver" style="text-align:center;font-size:.72rem;margin-top:18px"></footer>
-<script src="seed.js?v=4.65"></script><script src="calculator.js?v=4.65"></script><script src="app.js?v=4.65"></script><script type="module" src="firebase-sync.js?v=4.65"></script>
+<script src="seed.js?v=4.66"></script><script src="calculator.js?v=4.66"></script><script src="app.js?v=4.66"></script><script type="module" src="firebase-sync.js?v=4.66"></script>
 <!-- Modal Chiusura Aziendale -->
 <div class="modal" id="modalChiusura">
   <div class="modal-content">
