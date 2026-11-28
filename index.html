@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="it" data-ver="4.70">
+<html lang="it" data-ver="4.71">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -243,7 +243,16 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
     </div>
   </div>
 </section>
-<section class="pg" id="p-storico"><div class="h">Storico per mesi — tocca un mese per espandere e un avviso per sistemare</div><div id="storicoList"></div></section>
+<section class="pg" id="p-storico">
+  <div class="h">Storico per mesi — tocca un mese per espandere e un avviso per sistemare</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    <div class="seg" style="max-width:300px;flex:1">
+      <button type="button" id="btnStoricoTutte" class="on" onclick="setFiltroStorico('tutte')">📋 Tutte</button>
+      <button type="button" id="btnStoricoAperte" onclick="setFiltroStorico('aperte')">🔓 Solo aperte <span id="storicoAperteCount"></span></button>
+    </div>
+  </div>
+  <div id="storicoList"></div>
+</section>
 <section class="pg" id="p-riepilogo"><div id="rieNav"></div>  <div class="card" style="border-left:4px solid #107c41;background:rgba(16,124,65,0.03)">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <div style="flex:1;min-width:210px">
@@ -876,6 +885,6 @@ input[type=text],input[type=time],input[type=date],select,textarea{width:100%;pa
   </div>
 </div>
 
-<script src="calculator.js?v=4.70"></script><script src="app.js?v=4.70"></script><script type="module" src="firebase-sync.js?v=4.70"></script>
+<script src="calculator.js?v=4.71"></script><script src="app.js?v=4.71"></script><script type="module" src="firebase-sync.js?v=4.71"></script>
 </body>
 </html>
