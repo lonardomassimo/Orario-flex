@@ -1,5 +1,5 @@
 /** Cronoflex — orario flessibile AGESP SPA · by arch. Lonardo Massimo */
-const APP_VERSION = '4.70';
+const APP_VERSION = '4.71';
 const $ = id => document.getElementById(id), F = formatMinutesToHoursMins, T = formatMinutesToTime, P = parseTimeToMinutes;
 const VUOTO = () => ({ t: [], g: [], d: {}, pz: null, ver: {}, rep: [], att: {}, ev: [], todo: [], busta: {}, chiusure: [], prm: null, gcal: null, favAtt: [], customCatDir: null, exportedAttDays: {}, notif: null });
 let S = VUOTO(), undoStack = [], editIdx = null, currentDate = new Date(), rie = { y: new Date().getFullYear(), m: new Date().getMonth() + 1 };
@@ -1663,15 +1663,35 @@ function renderGiornoStorico(d) {
 
 const storicoOpenMesi = new Set();
 let storicoOpenInit = false;
+let storicoFiltro = 'tutte';
+
+function isGiornataApertaStorico(d) {
+  const td = tipoGiorno(d), tG = tDay(d), gG = gDay(d), has = tG.length || gG.length;
+  if (!has && (td.rip || td.fest)) return false;
+  const chiusa = giornataChiusa(d, tG);
+  if (!chiusa) return true;
+  if (!has) return true;
+  return alertGiorno(d).length > 0;
+}
+
+function setFiltroStorico(f) {
+  storicoFiltro = f === 'aperte' ? 'aperte' : 'tutte';
+  caricaStorico();
+}
 
 function caricaStorico() {
   const box = $('storicoList');
+  const btnTutte = $('btnStoricoTutte'), btnAperte = $('btnStoricoAperte');
+  if (btnTutte) btnTutte.classList.toggle('on', storicoFiltro !== 'aperte');
+  if (btnAperte) btnAperte.classList.toggle('on', storicoFiltro === 'aperte');
+
   const prevDetails = box.querySelectorAll('details.storico-mese[data-ym]');
-  if (prevDetails.length > 0) {
+  if (prevDetails.length > 0 && box.dataset.filtro !== 'aperte') {
     storicoOpenInit = true;
     storicoOpenMesi.clear();
     prevDetails.forEach(d => { if (d.open) storicoOpenMesi.add(d.dataset.ym); });
   }
+  box.dataset.filtro = storicoFiltro;
   box.innerHTML = '';
   const datePresenti = giorniConDati();
   const tISO = todayISO();
@@ -1681,25 +1701,43 @@ function caricaStorico() {
   // Mesi ordinati dal più recente al più vecchio
   const mesiSorted = Array.from(ymSet).sort().reverse();
 
+  let totAperte = 0;
+  const mesiData = mesiSorted.map(ym => {
+    const y = +ym.slice(0, 4), m = +ym.slice(5, 7);
+    const nomeMese = cap(MESI[m - 1]) + ' ' + y;
+    const numGiorni = ultimoMese(y, m);
+    const giorniMese = [];
+    for (let day = numGiorni; day >= 1; day--) {
+      const d = ym + '-' + String(day).padStart(2, '0');
+      if (d <= tISO || datePresenti.includes(d)) {
+        giorniMese.push(d);
+      }
+    }
+    const giorniApertiMese = giorniMese.filter(isGiornataApertaStorico);
+    totAperte += giorniApertiMese.length;
+    return { ym, nomeMese, giorniMese, giorniApertiMese };
+  });
+
+  const cntEl = $('storicoAperteCount');
+  if (cntEl) cntEl.textContent = `(${totAperte})`;
+
   if (!mesiSorted.length) {
     box.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">Nessuna data registrata</div>';
     return;
   }
 
-  mesiSorted.forEach((ym, idx) => {
-    const y = +ym.slice(0, 4), m = +ym.slice(5, 7);
-    const nomeMese = cap(MESI[m - 1]) + ' ' + y;
-    const numGiorni = ultimoMese(y, m);
-    
-    // Trova tutti i giorni del mese che hanno dati o rientrano nel mese fino a oggi se mese corrente
-    const giorniMese = [];
-    for (let day = numGiorni; day >= 1; day--) {
-      const d = ym + '-' + String(day).padStart(2, '0');
-      // se è il mese corrente, mostra fino a oggi; se è un mese passato, mostra se ci sono dati o tutti i giorni
-      if (d <= tISO || datePresenti.includes(d)) {
-        giorniMese.push(d);
-      }
-    }
+  if (storicoFiltro === 'aperte' && totAperte === 0) {
+    box.innerHTML = '<div class="card" style="text-align:center;padding:24px;color:var(--green);font-weight:600">✓ Tutte le giornate sono completate! Nessuna giornata aperta.</div>';
+    return;
+  }
+
+  const primoConDati = mesiSorted.find(m => datePresenti.some(d => d.startsWith(m)));
+
+  mesiData.forEach(({ ym, nomeMese, giorniMese, giorniApertiMese }, idx) => {
+    const soloAperte = storicoFiltro === 'aperte';
+    if (soloAperte && giorniApertiMese.length === 0) return;
+
+    const listaDaMostrare = soloAperte ? giorniApertiMese : giorniMese;
 
     // Statistiche rapide del mese per l'intestazione dell'accordion
     let countDati = 0;
@@ -1708,9 +1746,9 @@ function caricaStorico() {
     const details = document.createElement('details');
     details.className = 'card storico-mese';
     details.dataset.ym = ym;
-    // Aperto di default il primo mese con dati oppure il primo dell'elenco se ha dati
-    const primoConDati = mesiSorted.find(m => datePresenti.some(d => d.startsWith(m)));
-    if (storicoOpenInit) {
+    if (soloAperte) {
+      details.open = true;
+    } else if (storicoOpenInit) {
       details.open = storicoOpenMesi.has(ym);
     } else if (ym === primoConDati || (idx === 0 && countDati > 0)) {
       details.open = true;
@@ -1722,7 +1760,7 @@ function caricaStorico() {
     const renderMeseBody = () => {
       if (contentDiv.dataset.rendered === '1') return;
       contentDiv.dataset.rendered = '1';
-      giorniMese.forEach(d => {
+      listaDaMostrare.forEach(d => {
         contentDiv.appendChild(renderGiornoStorico(d));
       });
     };
@@ -1731,24 +1769,30 @@ function caricaStorico() {
       renderMeseBody();
     }
     details.addEventListener('toggle', () => {
-      storicoOpenInit = true;
+      if (!soloAperte) {
+        storicoOpenInit = true;
+        if (details.open) {
+          storicoOpenMesi.add(ym);
+        } else {
+          storicoOpenMesi.delete(ym);
+        }
+      }
       if (details.open) {
-        storicoOpenMesi.add(ym);
         renderMeseBody();
-      } else {
-        storicoOpenMesi.delete(ym);
       }
     });
 
     const summary = document.createElement('summary');
     summary.style.cssText = 'cursor:pointer;font-weight:700;display:flex;justify-content:space-between;align-items:center;padding:6px 0;user-select:none;color:var(--navy);font-size:1.05rem;';
-    summary.innerHTML = `<span>📅 ${nomeMese}</span><span style="font-size:.78rem;font-weight:600;color:var(--muted);background:var(--line);padding:2px 8px;border-radius:10px;">${countDati} gg con dati</span>`;
+    const badgeHtml = soloAperte
+      ? `<span style="font-size:.78rem;font-weight:700;color:#b26a00;background:#fff3d6;padding:2px 8px;border-radius:10px;">${giorniApertiMese.length} ${giorniApertiMese.length === 1 ? 'aperta' : 'aperte'}</span>`
+      : `<span style="font-size:.78rem;font-weight:600;color:var(--muted);background:var(--line);padding:2px 8px;border-radius:10px;">${countDati} gg con dati</span>`;
+    summary.innerHTML = `<span>📅 ${nomeMese}</span>${badgeHtml}`;
     details.appendChild(summary);
     details.appendChild(contentDiv);
     box.appendChild(details);
   });
 }
-
 // ---------- Riepilogo, report, navigazione mesi ----------
 function navMese(d) { rie.m += d; if (rie.m < 1) { rie.m = 12; rie.y--; } if (rie.m > 12) { rie.m = 1; rie.y++; } refresh(); }
 function setNav(y, m) { rie.y = +y; rie.m = +m; refresh(); }
